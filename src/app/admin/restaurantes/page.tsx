@@ -43,6 +43,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
 import { useDemoMode } from "@/contexts/demo-mode-context"
+import { AddRestaurantModal } from "@/components/modals/add-restaurant-modal"
+import { EditRestaurantModal } from "@/components/modals/edit-restaurant-modal"
+import { DeleteRestaurantModal } from "@/components/modals/delete-restaurant-modal"
+import { useRestaurants } from "@/hooks/use-restaurants"
+import { useRouter } from "next/navigation"
 
 const demoRestaurantes = [
   {
@@ -85,10 +90,38 @@ const demoRestaurantes = [
 
 export default function RestaurantesPage() {
   const { isDemoMode } = useDemoMode()
+  const { restaurants: supabaseRestaurants, loading, error, refreshRestaurants, isConfigured } = useRestaurants()
+  const router = useRouter()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [editingRestaurant, setEditingRestaurant] = useState<any>(null)
+  const [deletingRestaurant, setDeletingRestaurant] = useState<any>(null)
+  const [activeFilter, setActiveFilter] = useState("all")
   
-  const restaurantes = isDemoMode ? demoRestaurantes : []
+  // Usar datos de Supabase si está configurado y no está en modo demo
+  const allRestaurantes = isDemoMode 
+    ? demoRestaurantes 
+    : isConfigured 
+      ? supabaseRestaurants.map(restaurant => ({
+          id: restaurant.id,
+          name: restaurant.name,
+          productCount: 0, // Por ahora 0, después podemos contar productos
+          status: restaurant.is_active === false ? "Inactivo" : "Activo"
+        }))
+      : []
+
+  // Filtrar restaurantes basado en la tab activa
+  const restaurantes = allRestaurantes.filter(restaurant => {
+    switch (activeFilter) {
+      case "active":
+        return restaurant.status === "Activo"
+      case "inactive":
+        return restaurant.status === "Inactivo"
+      default:
+        return true // "all" muestra todos
+    }
+  })
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -165,7 +198,11 @@ export default function RestaurantesPage() {
                 <DropdownMenuItem>Desactivar seleccionados</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm" className="flex-1 sm:flex-none justify-center">
+            <Button 
+              size="sm" 
+              className="flex-1 sm:flex-none justify-center"
+              onClick={() => setIsAddModalOpen(true)}
+            >
               <Plus className="h-4 w-4 mr-2" />
               <span className="hidden xs:inline">Agregar restaurante</span>
               <span className="xs:hidden">Agregar</span>
@@ -175,15 +212,11 @@ export default function RestaurantesPage() {
 
         {/* Filter tabs */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <Tabs defaultValue="all" className="w-auto overflow-x-auto">
-            <TabsList className="grid w-full grid-cols-5 sm:w-auto sm:flex">
+          <Tabs defaultValue="all" className="w-auto overflow-x-auto" onValueChange={(value) => setActiveFilter(value)}>
+            <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:flex">
               <TabsTrigger value="all">Todos</TabsTrigger>
               <TabsTrigger value="active">Activos</TabsTrigger>
-              <TabsTrigger value="pending" className="text-xs sm:text-sm">Pendientes</TabsTrigger>
               <TabsTrigger value="inactive" className="text-xs sm:text-sm">Inactivos</TabsTrigger>
-              <TabsTrigger value="add" className="text-muted-foreground">
-                <Plus className="h-4 w-4" />
-              </TabsTrigger>
             </TabsList>
           </Tabs>
           <div className="flex items-center gap-2">
@@ -224,8 +257,39 @@ export default function RestaurantesPage() {
           </div>
         </div>
 
+        {/* Error message */}
+        {!isDemoMode && error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-red-800">Error al cargar restaurantes</p>
+                <p className="text-xs text-red-600 mt-1">{error}</p>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="mt-2 h-7"
+                  onClick={refreshRestaurants}
+                >
+                  Reintentar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {!isDemoMode && loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
+              <p className="text-sm text-muted-foreground">Cargando restaurantes...</p>
+            </div>
+          </div>
+        )}
+
         {/* Restaurantes table */}
-        {restaurantes.length > 0 ? (
+        {!loading && restaurantes.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -276,12 +340,27 @@ export default function RestaurantesPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Editar</DropdownMenuItem>
-                            <DropdownMenuItem>Ver menú</DropdownMenuItem>
-                            <DropdownMenuItem>
-                              {restaurante.status === "Activo" ? "Desactivar" : "Activar"}
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                if (isDemoMode) return
+                                const fullRestaurant = supabaseRestaurants.find(r => r.id === restaurante.id)
+                                if (fullRestaurant) {
+                                  router.push(`/admin/restaurantes/${restaurante.id}`)
+                                }
+                              }}
+                            >
+                              Editar
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => {
+                                if (isDemoMode) return
+                                const fullRestaurant = supabaseRestaurants.find(r => r.id === restaurante.id)
+                                if (fullRestaurant) {
+                                  setDeletingRestaurant(fullRestaurant)
+                                }
+                              }}
+                            >
                               Eliminar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -300,17 +379,34 @@ export default function RestaurantesPage() {
             </div>
             <div className="text-center space-y-3">
               <p className="text-sm font-medium text-muted-foreground">
-                {isDemoMode ? "No hay restaurantes que coincidan con los filtros" : "No tienes restaurantes aún"}
+                {isDemoMode 
+                  ? "No hay restaurantes que coincidan con los filtros" 
+                  : !isConfigured
+                    ? "Configura Supabase para ver tus restaurantes"
+                    : activeFilter === "active"
+                      ? "No hay restaurantes activos"
+                      : activeFilter === "inactive"
+                        ? "No hay restaurantes inactivos"
+                        : "No tienes restaurantes aún"
+                }
               </p>
-              {!isDemoMode && (
+              {!isDemoMode && !isConfigured && (
+                <p className="text-xs text-muted-foreground max-w-sm">
+                  Ve a Configuraciones → Integraciones para configurar Supabase
+                </p>
+              )}
+              {!isDemoMode && isConfigured && (
                 <p className="text-xs text-muted-foreground max-w-sm">
                   Agrega restaurantes para ampliar tu oferta gastronómica y atraer más clientes
                 </p>
               )}
             </div>
-            {!isDemoMode && (
+            {!isDemoMode && isConfigured && (
               <div className="pt-2">
-                <Button size="sm">
+                <Button 
+                  size="sm"
+                  onClick={() => setIsAddModalOpen(true)}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Agregar restaurante
                 </Button>
@@ -318,6 +414,44 @@ export default function RestaurantesPage() {
             )}
           </div>
         )}
+
+        <AddRestaurantModal 
+          open={isAddModalOpen}
+          onOpenChange={(open) => {
+            setIsAddModalOpen(open)
+            // Refrescar lista cuando se cierre el modal y no esté en modo demo
+            if (!open && !isDemoMode && isConfigured) {
+              refreshRestaurants()
+            }
+          }}
+        />
+
+        <EditRestaurantModal 
+          open={!!editingRestaurant}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingRestaurant(null)
+            }
+          }}
+          restaurant={editingRestaurant}
+          onSuccess={() => {
+            refreshRestaurants()
+          }}
+        />
+
+        <DeleteRestaurantModal 
+          open={!!deletingRestaurant}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeletingRestaurant(null)
+            }
+          }}
+          restaurant={deletingRestaurant}
+          onSuccess={() => {
+            refreshRestaurants()
+            router.push('/admin/restaurantes')
+          }}
+        />
       </div>
     </>
   )
