@@ -183,7 +183,7 @@ export default function PedidosPage() {
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+      <header className="hidden md:flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
         <div className="flex items-center gap-2 px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator
@@ -206,49 +206,59 @@ export default function PedidosPage() {
         </div>
       </header>
       
-      <div className="flex flex-1 flex-col gap-6 p-4 pt-0 max-w-[1080px] mx-auto w-full">
+      <div className="flex flex-1 flex-col gap-6 p-4 pt-6 md:pt-0 max-w-[1080px] mx-auto w-full">
         {/* Header with title and actions */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">Pedidos</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" className="hidden sm:flex">
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="hidden sm:flex">
               <Upload className="h-4 w-4 mr-2" />
               Importar
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
-                  Más acciones
+                  <span className="hidden sm:inline">Más acciones</span>
+                  <span className="sm:hidden">Acciones</span>
                   <ChevronDown className="h-4 w-4 ml-2" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem className="sm:hidden">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                </DropdownMenuItem>
+                <DropdownMenuItem className="sm:hidden">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar
+                </DropdownMenuItem>
                 <DropdownMenuItem>Exportar seleccionados</DropdownMenuItem>
                 <DropdownMenuItem>Marcar como completados</DropdownMenuItem>
                 <DropdownMenuItem>Cancelar seleccionados</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm">
+            <Button size="sm" className="flex-1 sm:flex-none justify-center">
               <Plus className="h-4 w-4 mr-2" />
-              Nuevo pedido
+              <span className="hidden xs:inline">Nuevo pedido</span>
+              <span className="xs:hidden">Nuevo</span>
             </Button>
           </div>
         </div>
 
         {/* Filter tabs */}
-        <div className="flex items-center justify-between">
-          <Tabs defaultValue="all" className="w-auto">
-            <TabsList>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <Tabs defaultValue="all" className="w-auto overflow-x-auto">
+            <TabsList className="grid w-full grid-cols-5 sm:w-auto sm:flex">
               <TabsTrigger value="all">Todos</TabsTrigger>
-              <TabsTrigger value="pending">Pendientes</TabsTrigger>
-              <TabsTrigger value="completed">Completados</TabsTrigger>
-              <TabsTrigger value="cancelled">Cancelados</TabsTrigger>
+              <TabsTrigger value="pending" className="text-xs sm:text-sm">Pendientes</TabsTrigger>
+              <TabsTrigger value="completed" className="text-xs sm:text-sm">Completados</TabsTrigger>
+              <TabsTrigger value="cancelled" className="text-xs sm:text-sm">Cancelados</TabsTrigger>
               <TabsTrigger value="add" className="text-muted-foreground">
                 <Plus className="h-4 w-4" />
               </TabsTrigger>
@@ -256,7 +266,7 @@ export default function PedidosPage() {
           </Tabs>
           <div className="flex items-center gap-2">
             {isSearchExpanded ? (
-              <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-background min-w-[300px]">
+              <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-background w-full sm:min-w-[300px]">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar pedidos..."
@@ -309,21 +319,21 @@ export default function PedidosPage() {
                     >
                       <CardContent className="p-3">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center">
+                          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-black rounded-full flex items-center justify-center flex-shrink-0">
                               {getPaymentIcon(order.paymentMethod)}
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1 min-w-0 flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm">{order.id}</span>
+                                <span className="font-medium text-xs sm:text-sm truncate">{order.id}</span>
                               </div>
-                              <div className="flex items-center gap-2 text-xs">
+                              <div className="flex items-center gap-2 text-xs flex-wrap">
                                 <Badge 
                                   variant={order.statusColor === "green" ? "default" : "destructive"}
                                   className={
                                     order.statusColor === "green" 
-                                      ? "bg-green-100 text-green-800 hover:bg-green-100" 
-                                      : "bg-red-100 text-red-800 hover:bg-red-100"
+                                      ? "bg-green-100 text-green-800 hover:bg-green-100 text-xs" 
+                                      : "bg-red-100 text-red-800 hover:bg-red-100 text-xs"
                                   }
                                 >
                                   {order.status}
@@ -332,9 +342,9 @@ export default function PedidosPage() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <span className="font-bold text-lg">{order.amount}</span>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
+                            <span className="font-bold text-sm sm:text-lg">{order.amount}</span>
+                            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                           </div>
                         </div>
                       </CardContent>
@@ -345,29 +355,31 @@ export default function PedidosPage() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 space-y-6">
-            <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-              <CreditCard className="h-6 w-6 text-muted-foreground/50" />
-            </div>
-            <div className="text-center space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
-                {isDemoMode ? "No hay pedidos que coincidan con los filtros" : "No tienes pedidos aún"}
-              </p>
-              {!isDemoMode && (
-                <p className="text-xs text-muted-foreground max-w-sm">
-                  Cuando recibas tu primer pedido, aparecerá aquí con toda la información de pago
-                </p>
-              )}
-            </div>
-            {!isDemoMode && (
-              <div className="pt-2">
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crear pedido de prueba
-                </Button>
+          <Card className="bg-white">
+            <CardContent className="flex flex-col items-center justify-center py-16 space-y-6">
+              <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
+                <CreditCard className="h-6 w-6 text-muted-foreground/50" />
               </div>
-            )}
-          </div>
+              <div className="text-center space-y-3">
+                <p className="text-sm font-medium text-muted-foreground">
+                  {isDemoMode ? "No hay pedidos que coincidan con los filtros" : "No tienes pedidos aún"}
+                </p>
+                {!isDemoMode && (
+                  <p className="text-xs text-muted-foreground max-w-sm">
+                    Cuando recibas tu primer pedido, aparecerá aquí con toda la información de pago
+                  </p>
+                )}
+              </div>
+              {!isDemoMode && (
+                <div className="pt-2">
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crear pedido de prueba
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* Order Detail Modal */}

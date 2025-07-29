@@ -10,6 +10,11 @@ import {
   Package,
   ShoppingCart,
   Truck,
+  Store,
+  UtensilsCrossed,
+  CreditCard,
+  Users,
+  Megaphone,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -38,6 +43,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       // For simple items, check exact match or if it's the admin root
       return pathname === itemUrl || (itemUrl === "/admin" && pathname === "/admin")
     }
+  }
+
+  // Function to check if an administration item is active
+  const isAdminItemActive = (itemUrl: string) => {
+    return pathname === itemUrl
   }
 
   // Dynamic data based on current pathname
@@ -88,23 +98,42 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         isActive: isNavItemActive("/admin/pedidos", false),
       },
       {
-        title: "Ventas",
-        url: "/admin/ventas",
-        icon: DollarSign,
-        isActive: isNavItemActive("/admin/ventas", false),
-      },
-      {
-        title: "Repartidores",
-        url: "/admin/repartidores",
-        icon: Truck,
-        isActive: isNavItemActive("/admin/repartidores", false),
+        title: "Marketing",
+        url: "/admin/marketing",
+        icon: Megaphone,
+        isActive: isNavItemActive("/admin/marketing", false),
       },
     ],
-    projects: [
+    administration: [
       {
-        name: "Components Test",
-        url: "/shadcn-components",
-        icon: Command,
+        name: "Bodegones",
+        url: "/admin/bodegones",
+        icon: Store,
+        isActive: isAdminItemActive("/admin/bodegones"),
+      },
+      {
+        name: "Restaurantes",
+        url: "/admin/restaurantes",
+        icon: UtensilsCrossed,
+        isActive: isAdminItemActive("/admin/restaurantes"),
+      },
+      {
+        name: "Métodos de pago",
+        url: "/admin/metodos-pago",
+        icon: CreditCard,
+        isActive: isAdminItemActive("/admin/metodos-pago"),
+      },
+      {
+        name: "Equipo",
+        url: "/admin/equipo",
+        icon: Users,
+        isActive: isAdminItemActive("/admin/equipo"),
+      },
+      {
+        name: "Repartidores",
+        url: "/admin/repartidores",
+        icon: Truck,
+        isActive: isAdminItemActive("/admin/repartidores"),
       },
     ],
   }
@@ -116,7 +145,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavProjects projects={data.administration} title="Administración" />
       </SidebarContent>
       <SidebarFooter>
         <DemoModeToggle />

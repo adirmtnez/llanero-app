@@ -12,25 +12,26 @@ export default function AdminPage() {
   const { isDemoMode } = useDemoMode()
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+      <header className="hidden md:flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
         <div className="flex items-center gap-2 px-4">
           <SidebarTrigger className="-ml-1" />
         </div>
       </header>
-      <div className="flex flex-1 flex-col gap-6 p-4 pt-0 max-w-[1080px] mx-auto w-full">
+      <div className="flex flex-1 flex-col gap-6 p-4 pt-6 md:pt-0 max-w-[1080px] mx-auto w-full">
         {/* Time Filter Tabs */}
-        <div className="flex items-center justify-between">
-          <Tabs defaultValue="este-año" className="w-auto">
-            <TabsList className="grid w-full grid-cols-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <Tabs defaultValue="este-año" className="w-full sm:w-auto overflow-x-auto">
+            <TabsList className="grid w-full grid-cols-4 sm:w-auto sm:flex">
               <TabsTrigger value="hoy">Hoy</TabsTrigger>
-              <TabsTrigger value="esta-semana">Esta semana</TabsTrigger>
-              <TabsTrigger value="este-mes">Este mes</TabsTrigger>
-              <TabsTrigger value="este-año">Este año</TabsTrigger>
+              <TabsTrigger value="esta-semana" className="text-xs sm:text-sm">Esta semana</TabsTrigger>
+              <TabsTrigger value="este-mes" className="text-xs sm:text-sm">Este mes</TabsTrigger>
+              <TabsTrigger value="este-año" className="text-xs sm:text-sm">Este año</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="w-full sm:w-auto">
             <Calendar className="h-4 w-4 mr-2" />
-            Air Date/Time Picker
+            <span className="hidden sm:inline">Air Date/Time Picker</span>
+            <span className="sm:hidden">Fechas</span>
           </Button>
         </div>
 
@@ -117,30 +118,31 @@ export default function AdminPage() {
 
         {/* Productos más vendidos */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <div>
-              <CardTitle className="text-lg font-semibold">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0 pb-4">
+            <div className="space-y-1">
+              <CardTitle className="text-base sm:text-lg font-semibold">
                 Productos más vendidos del mes
               </CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
                 ¿Qué es lo que más compraron los clientes?
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
               <FileText className="h-4 w-4 mr-2" />
-              Exportar CSV
+              <span className="hidden sm:inline">Exportar CSV</span>
+              <span className="sm:hidden">Exportar</span>
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col items-center justify-center py-16 space-y-4">
-              <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-                <FileText className="h-6 w-6 text-muted-foreground/50" />
+            <div className="flex flex-col items-center justify-center py-12 sm:py-16 space-y-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
+                <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground/50" />
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground text-center">
                 {isDemoMode ? "Sin resultados" : "Aún no hay productos vendidos"}
               </p>
               {!isDemoMode && (
-                <p className="text-xs text-muted-foreground text-center max-w-sm">
+                <p className="text-xs text-muted-foreground text-center max-w-sm px-4">
                   Cuando tengas ventas, aquí aparecerán tus productos más populares
                 </p>
               )}

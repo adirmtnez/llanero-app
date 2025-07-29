@@ -36,57 +36,75 @@ import {
   Plus,
   Search,
   SlidersHorizontal,
-  X
+  X,
+  Truck
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
 import { useDemoMode } from "@/contexts/demo-mode-context"
 
-const demoProducts = [
+const demoDeliveryPersons = [
   {
     id: "1",
-    name: "Hamburguesa Clásica",
-    sku: "HAMBUR-001",
-    status: "Active",
-    inventory: "25 in stock",
-    category: "Hamburguesas",
-    price: "$8.99",
+    name: "Juan Carlos Pérez",
+    phone: "+58 414 1234567",
+    establishment: "Pizza Express",
+    establishmentType: "restaurante",
+    status: "Activo",
   },
   {
     id: "2", 
-    name: "Pizza Margarita",
-    sku: "PIZZA-002",
-    status: "Active",
-    inventory: "12 in stock",
-    category: "Pizzas",
-    price: "$12.50",
+    name: "María González",
+    phone: "+58 424 9876543",
+    establishment: "Bodegón Central",
+    establishmentType: "bodegon",
+    status: "Activo",
   },
   {
     id: "3",
-    name: "Tacos al Pastor",
-    sku: "TACOS-003",
-    status: "Active",
-    inventory: "30 in stock",
-    category: "Tacos",
-    price: "$6.75",
+    name: "Carlos Rodríguez",
+    phone: "+58 412 5555555",
+    establishment: "Minimarket El Arepazo",
+    establishmentType: "bodegon",
+    status: "Inactivo",
   },
   {
     id: "4",
-    name: "Ensalada César",
-    sku: "ENSALADA-004",
-    status: "Draft",
-    inventory: "0 in stock",
-    category: "Ensaladas",
-    price: "$7.25",
+    name: "Ana López",
+    phone: "+58 416 7777777",
+    establishment: "Burger Palace",
+    establishmentType: "restaurante",
+    status: "Activo",
+  },
+  {
+    id: "5",
+    name: "Luis Martínez",
+    phone: "+58 426 3333333",
+    establishment: "Sushi House",
+    establishmentType: "restaurante",
+    status: "En delivery",
   },
 ]
 
-export default function ProductosPage() {
+export default function RepartidoresPage() {
   const { isDemoMode } = useDemoMode()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   
-  const products = isDemoMode ? demoProducts : []
+  const deliveryPersons = isDemoMode ? demoDeliveryPersons : []
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Activo":
+        return "bg-green-100 text-green-800 hover:bg-green-100"
+      case "En delivery":
+        return "bg-blue-100 text-blue-800 hover:bg-blue-100"
+      case "Inactivo":
+        return "bg-red-100 text-red-800 hover:bg-red-100"
+      default:
+        return "bg-gray-100 text-gray-800 hover:bg-gray-100"
+    }
+  }
 
   return (
     <>
@@ -106,7 +124,7 @@ export default function ProductosPage() {
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbPage>Productos</BreadcrumbPage>
+                <BreadcrumbPage>Repartidores</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -117,7 +135,7 @@ export default function ProductosPage() {
         {/* Header with title and actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">Productos</h1>
+            <h1 className="text-2xl font-bold">Repartidores</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" className="hidden sm:flex">
@@ -147,12 +165,12 @@ export default function ProductosPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem>Exportar seleccionados</DropdownMenuItem>
                 <DropdownMenuItem>Edición masiva</DropdownMenuItem>
-                <DropdownMenuItem>Eliminar seleccionados</DropdownMenuItem>
+                <DropdownMenuItem>Desactivar seleccionados</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button size="sm" className="flex-1 sm:flex-none justify-center">
               <Plus className="h-4 w-4 mr-2" />
-              <span className="hidden xs:inline">Agregar producto</span>
+              <span className="hidden xs:inline">Agregar repartidor</span>
               <span className="xs:hidden">Agregar</span>
             </Button>
           </div>
@@ -164,8 +182,8 @@ export default function ProductosPage() {
             <TabsList className="grid w-full grid-cols-5 sm:w-auto sm:flex">
               <TabsTrigger value="all">Todos</TabsTrigger>
               <TabsTrigger value="active">Activos</TabsTrigger>
-              <TabsTrigger value="draft">Borrador</TabsTrigger>
-              <TabsTrigger value="archived" className="text-xs sm:text-sm">Archivados</TabsTrigger>
+              <TabsTrigger value="delivery" className="text-xs sm:text-sm">En delivery</TabsTrigger>
+              <TabsTrigger value="inactive">Inactivos</TabsTrigger>
               <TabsTrigger value="add" className="text-muted-foreground">
                 <Plus className="h-4 w-4" />
               </TabsTrigger>
@@ -176,7 +194,7 @@ export default function ProductosPage() {
               <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-background w-full sm:min-w-[300px]">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar productos..."
+                  placeholder="Buscar repartidores..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="border-0 p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -209,8 +227,8 @@ export default function ProductosPage() {
           </div>
         </div>
 
-        {/* Products table */}
-        {products.length > 0 ? (
+        {/* Delivery Persons table */}
+        {deliveryPersons.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -219,50 +237,45 @@ export default function ProductosPage() {
                     <TableHead className="w-12">
                       <Checkbox />
                     </TableHead>
-                    <TableHead className="min-w-[200px]">Producto</TableHead>
-                    <TableHead className="min-w-[120px]">SKU</TableHead>
-                    <TableHead className="min-w-[100px]">Estado</TableHead>
-                    <TableHead className="min-w-[120px]">Inventario</TableHead>
-                    <TableHead className="min-w-[120px]">Categoría</TableHead>
-                    <TableHead className="min-w-[100px]">Precio</TableHead>
+                    <TableHead className="min-w-[160px]">Nombre</TableHead>
+                    <TableHead className="min-w-[130px]">Teléfono</TableHead>
+                    <TableHead className="min-w-[180px]">Bodegón/Restaurante</TableHead>
+                    <TableHead className="min-w-[100px]">Status</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {products.map((product) => (
-                    <TableRow key={product.id}>
+                  {deliveryPersons.map((person) => (
+                    <TableRow key={person.id}>
                       <TableCell>
                         <Checkbox />
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
-                            <div className="w-4 h-4 sm:w-6 sm:h-6 bg-muted-foreground/20 rounded"></div>
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
+                            <div className="w-4 h-4 sm:w-6 sm:h-6 bg-muted-foreground/20 rounded-full"></div>
                           </div>
-                          <span className="truncate">{product.name}</span>
+                          <span className="truncate">{person.name}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground font-mono text-xs sm:text-sm">
-                        <span className="block truncate">{product.sku}</span>
+                        <span className="block truncate">{person.phone}</span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <div className="flex flex-col">
+                          <span className="truncate text-sm">{person.establishment}</span>
+                          <span className="text-xs text-muted-foreground/60 capitalize">
+                            {person.establishmentType}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          variant={product.status === "Active" ? "default" : "secondary"}
-                          className={product.status === "Active" ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
+                          variant="default"
+                          className={getStatusColor(person.status)}
                         >
-                          {product.status === "Active" ? "Activo" : product.status === "Draft" ? "Borrador" : product.status}
+                          {person.status}
                         </Badge>
-                      </TableCell>
-                      <TableCell className={product.inventory.includes("0") ? "text-red-600" : "text-green-600"}>
-                        {product.inventory.replace("in stock", "en stock")}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        <span className="truncate block">
-                          {product.category === "Uncategorized" ? "Sin categoría" : product.category}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {product.price}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -273,8 +286,10 @@ export default function ProductosPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem>Editar</DropdownMenuItem>
-                            <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                            <DropdownMenuItem>Archivar</DropdownMenuItem>
+                            <DropdownMenuItem>Ver historial</DropdownMenuItem>
+                            <DropdownMenuItem>
+                              {person.status === "Activo" ? "Desactivar" : "Activar"}
+                            </DropdownMenuItem>
                             <DropdownMenuItem className="text-red-600">
                               Eliminar
                             </DropdownMenuItem>
@@ -290,15 +305,15 @@ export default function ProductosPage() {
         ) : (
           <div className="flex flex-col items-center justify-center space-y-6 py-16">
             <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-              <Plus className="h-6 w-6 text-muted-foreground/50" />
+              <Truck className="h-6 w-6 text-muted-foreground/50" />
             </div>
             <div className="text-center space-y-3">
               <p className="text-sm font-medium text-muted-foreground">
-                {isDemoMode ? "No hay productos que coincidan con los filtros" : "No tienes productos aún"}
+                {isDemoMode ? "No hay repartidores que coincidan con los filtros" : "No tienes repartidores aún"}
               </p>
               {!isDemoMode && (
                 <p className="text-xs text-muted-foreground max-w-sm">
-                  Comienza agregando tu primer producto para gestionar tu inventario
+                  Agrega repartidores para gestionar las entregas de tus pedidos
                 </p>
               )}
             </div>
@@ -306,7 +321,7 @@ export default function ProductosPage() {
               <div className="pt-2">
                 <Button size="sm">
                   <Plus className="h-4 w-4 mr-2" />
-                  Agregar producto
+                  Agregar repartidor
                 </Button>
               </div>
             )}

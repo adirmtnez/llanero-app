@@ -36,57 +36,72 @@ import {
   Plus,
   Search,
   SlidersHorizontal,
-  X
+  X,
+  UtensilsCrossed,
+  Package
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
 import { useDemoMode } from "@/contexts/demo-mode-context"
 
-const demoProducts = [
+const demoRestaurantes = [
   {
     id: "1",
-    name: "Hamburguesa Clásica",
-    sku: "HAMBUR-001",
-    status: "Active",
-    inventory: "25 in stock",
-    category: "Hamburguesas",
-    price: "$8.99",
+    name: "Pizza Express",
+    productCount: 25,
+    status: "Activo",
   },
   {
     id: "2", 
-    name: "Pizza Margarita",
-    sku: "PIZZA-002",
-    status: "Active",
-    inventory: "12 in stock",
-    category: "Pizzas",
-    price: "$12.50",
+    name: "Burger Palace",
+    productCount: 18,
+    status: "Activo",
   },
   {
     id: "3",
-    name: "Tacos al Pastor",
-    sku: "TACOS-003",
-    status: "Active",
-    inventory: "30 in stock",
-    category: "Tacos",
-    price: "$6.75",
+    name: "Tacos El Rincón",
+    productCount: 22,
+    status: "Inactivo",
   },
   {
     id: "4",
-    name: "Ensalada César",
-    sku: "ENSALADA-004",
-    status: "Draft",
-    inventory: "0 in stock",
-    category: "Ensaladas",
-    price: "$7.25",
+    name: "Sushi House",
+    productCount: 35,
+    status: "Activo",
+  },
+  {
+    id: "5",
+    name: "Pollo Dorado",
+    productCount: 12,
+    status: "Pendiente",
+  },
+  {
+    id: "6",
+    name: "Café Central",
+    productCount: 28,
+    status: "Activo",
   },
 ]
 
-export default function ProductosPage() {
+export default function RestaurantesPage() {
   const { isDemoMode } = useDemoMode()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   
-  const products = isDemoMode ? demoProducts : []
+  const restaurantes = isDemoMode ? demoRestaurantes : []
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Activo":
+        return "bg-green-100 text-green-800 hover:bg-green-100"
+      case "Pendiente":
+        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+      case "Inactivo":
+        return "bg-red-100 text-red-800 hover:bg-red-100"
+      default:
+        return "bg-gray-100 text-gray-800 hover:bg-gray-100"
+    }
+  }
 
   return (
     <>
@@ -106,7 +121,7 @@ export default function ProductosPage() {
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbPage>Productos</BreadcrumbPage>
+                <BreadcrumbPage>Restaurantes</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -117,7 +132,7 @@ export default function ProductosPage() {
         {/* Header with title and actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">Productos</h1>
+            <h1 className="text-2xl font-bold">Restaurantes</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" className="hidden sm:flex">
@@ -147,12 +162,12 @@ export default function ProductosPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem>Exportar seleccionados</DropdownMenuItem>
                 <DropdownMenuItem>Edición masiva</DropdownMenuItem>
-                <DropdownMenuItem>Eliminar seleccionados</DropdownMenuItem>
+                <DropdownMenuItem>Desactivar seleccionados</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button size="sm" className="flex-1 sm:flex-none justify-center">
               <Plus className="h-4 w-4 mr-2" />
-              <span className="hidden xs:inline">Agregar producto</span>
+              <span className="hidden xs:inline">Agregar restaurante</span>
               <span className="xs:hidden">Agregar</span>
             </Button>
           </div>
@@ -164,8 +179,8 @@ export default function ProductosPage() {
             <TabsList className="grid w-full grid-cols-5 sm:w-auto sm:flex">
               <TabsTrigger value="all">Todos</TabsTrigger>
               <TabsTrigger value="active">Activos</TabsTrigger>
-              <TabsTrigger value="draft">Borrador</TabsTrigger>
-              <TabsTrigger value="archived" className="text-xs sm:text-sm">Archivados</TabsTrigger>
+              <TabsTrigger value="pending" className="text-xs sm:text-sm">Pendientes</TabsTrigger>
+              <TabsTrigger value="inactive" className="text-xs sm:text-sm">Inactivos</TabsTrigger>
               <TabsTrigger value="add" className="text-muted-foreground">
                 <Plus className="h-4 w-4" />
               </TabsTrigger>
@@ -176,7 +191,7 @@ export default function ProductosPage() {
               <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-background w-full sm:min-w-[300px]">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar productos..."
+                  placeholder="Buscar restaurantes..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="border-0 p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -209,8 +224,8 @@ export default function ProductosPage() {
           </div>
         </div>
 
-        {/* Products table */}
-        {products.length > 0 ? (
+        {/* Restaurantes table */}
+        {restaurantes.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -219,50 +234,39 @@ export default function ProductosPage() {
                     <TableHead className="w-12">
                       <Checkbox />
                     </TableHead>
-                    <TableHead className="min-w-[200px]">Producto</TableHead>
-                    <TableHead className="min-w-[120px]">SKU</TableHead>
-                    <TableHead className="min-w-[100px]">Estado</TableHead>
-                    <TableHead className="min-w-[120px]">Inventario</TableHead>
-                    <TableHead className="min-w-[120px]">Categoría</TableHead>
-                    <TableHead className="min-w-[100px]">Precio</TableHead>
+                    <TableHead className="min-w-[200px]">Nombre</TableHead>
+                    <TableHead className="min-w-[120px]">Productos</TableHead>
+                    <TableHead className="min-w-[100px]">Estatus</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {products.map((product) => (
-                    <TableRow key={product.id}>
+                  {restaurantes.map((restaurante) => (
+                    <TableRow key={restaurante.id}>
                       <TableCell>
                         <Checkbox />
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
-                            <div className="w-4 h-4 sm:w-6 sm:h-6 bg-muted-foreground/20 rounded"></div>
+                            <UtensilsCrossed className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                           </div>
-                          <span className="truncate">{product.name}</span>
+                          <span className="truncate">{restaurante.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground font-mono text-xs sm:text-sm">
-                        <span className="block truncate">{product.sku}</span>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{restaurante.productCount}</span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          variant={product.status === "Active" ? "default" : "secondary"}
-                          className={product.status === "Active" ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
+                          variant="default"
+                          className={getStatusColor(restaurante.status)}
                         >
-                          {product.status === "Active" ? "Activo" : product.status === "Draft" ? "Borrador" : product.status}
+                          {restaurante.status}
                         </Badge>
-                      </TableCell>
-                      <TableCell className={product.inventory.includes("0") ? "text-red-600" : "text-green-600"}>
-                        {product.inventory.replace("in stock", "en stock")}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        <span className="truncate block">
-                          {product.category === "Uncategorized" ? "Sin categoría" : product.category}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {product.price}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -273,8 +277,10 @@ export default function ProductosPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem>Editar</DropdownMenuItem>
-                            <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                            <DropdownMenuItem>Archivar</DropdownMenuItem>
+                            <DropdownMenuItem>Ver menú</DropdownMenuItem>
+                            <DropdownMenuItem>
+                              {restaurante.status === "Activo" ? "Desactivar" : "Activar"}
+                            </DropdownMenuItem>
                             <DropdownMenuItem className="text-red-600">
                               Eliminar
                             </DropdownMenuItem>
@@ -290,15 +296,15 @@ export default function ProductosPage() {
         ) : (
           <div className="flex flex-col items-center justify-center space-y-6 py-16">
             <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-              <Plus className="h-6 w-6 text-muted-foreground/50" />
+              <UtensilsCrossed className="h-6 w-6 text-muted-foreground/50" />
             </div>
             <div className="text-center space-y-3">
               <p className="text-sm font-medium text-muted-foreground">
-                {isDemoMode ? "No hay productos que coincidan con los filtros" : "No tienes productos aún"}
+                {isDemoMode ? "No hay restaurantes que coincidan con los filtros" : "No tienes restaurantes aún"}
               </p>
               {!isDemoMode && (
                 <p className="text-xs text-muted-foreground max-w-sm">
-                  Comienza agregando tu primer producto para gestionar tu inventario
+                  Agrega restaurantes para ampliar tu oferta gastronómica y atraer más clientes
                 </p>
               )}
             </div>
@@ -306,7 +312,7 @@ export default function ProductosPage() {
               <div className="pt-2">
                 <Button size="sm">
                   <Plus className="h-4 w-4 mr-2" />
-                  Agregar producto
+                  Agregar restaurante
                 </Button>
               </div>
             )}
