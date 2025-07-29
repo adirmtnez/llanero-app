@@ -36,57 +36,64 @@ import {
   Plus,
   Search,
   SlidersHorizontal,
-  X
+  X,
+  Package
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
 import { useDemoMode } from "@/contexts/demo-mode-context"
 
-const demoProducts = [
+const demoSubCategories = [
   {
     id: "1",
-    name: "Hamburguesa Clásica",
-    sku: "HAMBUR-001",
-    status: "Active",
-    inventory: "25 in stock",
-    category: "Hamburguesas",
-    price: "$8.99",
+    name: "Salsas Picantes",
+    parentCategory: "Salsas",
+    productCount: 8,
+    status: "Visible",
   },
   {
     id: "2", 
-    name: "Pizza Margarita",
-    sku: "PIZZA-002",
-    status: "Active",
-    inventory: "12 in stock",
-    category: "Pizzas",
-    price: "$12.50",
+    name: "Salsas Dulces",
+    parentCategory: "Salsas",
+    productCount: 3,
+    status: "Visible",
   },
   {
     id: "3",
-    name: "Tacos al Pastor",
-    sku: "TACOS-003",
-    status: "Active",
-    inventory: "30 in stock",
-    category: "Tacos",
-    price: "$6.75",
+    name: "Hamburguesas",
+    parentCategory: "Platos Principales",
+    productCount: 12,
+    status: "Visible",
   },
   {
     id: "4",
-    name: "Ensalada César",
-    sku: "ENSALADA-004",
-    status: "Draft",
-    inventory: "0 in stock",
-    category: "Ensaladas",
-    price: "$7.25",
+    name: "Pizzas",
+    parentCategory: "Platos Principales",
+    productCount: 15,
+    status: "Visible",
+  },
+  {
+    id: "5",
+    name: "Tacos",
+    parentCategory: "Platos Principales",
+    productCount: 8,
+    status: "Oculta",
+  },
+  {
+    id: "6",
+    name: "Combos Familiares",
+    parentCategory: "Familia",
+    productCount: 4,
+    status: "Visible",
   },
 ]
 
-export default function ProductosPage() {
+export default function SubCategoriasPage() {
   const { isDemoMode } = useDemoMode()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   
-  const products = isDemoMode ? demoProducts : []
+  const subCategories = isDemoMode ? demoSubCategories : []
 
   return (
     <>
@@ -106,7 +113,13 @@ export default function ProductosPage() {
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbPage>Productos</BreadcrumbPage>
+                <BreadcrumbLink href="/admin/productos">
+                  Productos
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Sub Categorías</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -117,7 +130,7 @@ export default function ProductosPage() {
         {/* Header with title and actions */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">Productos</h1>
+            <h1 className="text-2xl font-bold">Sub Categorías</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm">
@@ -143,7 +156,7 @@ export default function ProductosPage() {
             </DropdownMenu>
             <Button size="sm">
               <Plus className="h-4 w-4 mr-2" />
-              Agregar producto
+              Agregar sub categoría
             </Button>
           </div>
         </div>
@@ -152,10 +165,10 @@ export default function ProductosPage() {
         <div className="flex items-center justify-between">
           <Tabs defaultValue="all" className="w-auto">
             <TabsList>
-              <TabsTrigger value="all">Todos</TabsTrigger>
-              <TabsTrigger value="active">Activos</TabsTrigger>
-              <TabsTrigger value="draft">Borrador</TabsTrigger>
-              <TabsTrigger value="archived">Archivados</TabsTrigger>
+              <TabsTrigger value="all">Todas</TabsTrigger>
+              <TabsTrigger value="visible">Visibles</TabsTrigger>
+              <TabsTrigger value="hidden">Ocultas</TabsTrigger>
+              <TabsTrigger value="archived">Archivadas</TabsTrigger>
               <TabsTrigger value="add" className="text-muted-foreground">
                 <Plus className="h-4 w-4" />
               </TabsTrigger>
@@ -166,7 +179,7 @@ export default function ProductosPage() {
               <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-background min-w-[300px]">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar productos..."
+                  placeholder="Buscar sub categorías..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="border-0 p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -199,7 +212,7 @@ export default function ProductosPage() {
           </div>
         </div>
 
-        {/* Products table */}
+        {/* Sub Categories table */}
         <div className="border rounded-lg bg-white">
           <Table>
             <TableHeader>
@@ -207,19 +220,17 @@ export default function ProductosPage() {
                 <TableHead className="w-12">
                   <Checkbox />
                 </TableHead>
-                <TableHead>Producto</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Inventario</TableHead>
+                <TableHead>Nombre</TableHead>
                 <TableHead>Categoría</TableHead>
-                <TableHead>Precio</TableHead>
+                <TableHead>Productos</TableHead>
+                <TableHead>Estatus</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.length > 0 ? (
-                products.map((product) => (
-                  <TableRow key={product.id}>
+              {subCategories.length > 0 ? (
+                subCategories.map((subCategory) => (
+                  <TableRow key={subCategory.id}>
                     <TableCell>
                       <Checkbox />
                     </TableCell>
@@ -228,28 +239,25 @@ export default function ProductosPage() {
                         <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center">
                           <div className="w-6 h-6 bg-muted-foreground/20 rounded"></div>
                         </div>
-                        {product.name}
+                        {subCategory.name}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground font-mono text-sm">
-                      {product.sku}
+                    <TableCell className="text-muted-foreground">
+                      {subCategory.parentCategory}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{subCategory.productCount}</span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge 
-                        variant={product.status === "Active" ? "default" : "secondary"}
-                        className={product.status === "Active" ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
+                        variant={subCategory.status === "Visible" ? "default" : "secondary"}
+                        className={subCategory.status === "Visible" ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
                       >
-                        {product.status === "Active" ? "Activo" : product.status === "Draft" ? "Borrador" : product.status}
+                        {subCategory.status}
                       </Badge>
-                    </TableCell>
-                    <TableCell className={product.inventory.includes("0") ? "text-red-600" : "text-green-600"}>
-                      {product.inventory.replace("in stock", "en stock")}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {product.category === "Uncategorized" ? "Sin categoría" : product.category}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {product.price}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -261,7 +269,9 @@ export default function ProductosPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem>Editar</DropdownMenuItem>
                           <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                          <DropdownMenuItem>Archivar</DropdownMenuItem>
+                          <DropdownMenuItem>
+                            {subCategory.status === "Visible" ? "Ocultar" : "Mostrar"}
+                          </DropdownMenuItem>
                           <DropdownMenuItem className="text-red-600">
                             Eliminar
                           </DropdownMenuItem>
@@ -272,18 +282,18 @@ export default function ProductosPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-48">
+                  <TableCell colSpan={6} className="h-48">
                     <div className="flex flex-col items-center justify-center space-y-6 py-8">
                       <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
                         <Plus className="h-6 w-6 text-muted-foreground/50" />
                       </div>
                       <div className="text-center space-y-3">
                         <p className="text-sm font-medium text-muted-foreground">
-                          {isDemoMode ? "No hay productos que coincidan con los filtros" : "No tienes productos aún"}
+                          {isDemoMode ? "No hay sub categorías que coincidan con los filtros" : "No tienes sub categorías aún"}
                         </p>
                         {!isDemoMode && (
                           <p className="text-xs text-muted-foreground max-w-sm">
-                            Comienza agregando tu primer producto para gestionar tu inventario
+                            Organiza mejor tus productos creando sub categorías dentro de las categorías principales
                           </p>
                         )}
                       </div>
@@ -291,7 +301,7 @@ export default function ProductosPage() {
                         <div className="pt-2">
                           <Button size="sm">
                             <Plus className="h-4 w-4 mr-2" />
-                            Agregar producto
+                            Agregar sub categoría
                           </Button>
                         </div>
                       )}

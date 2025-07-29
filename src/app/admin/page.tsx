@@ -6,8 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Calendar, FileText, Package, Settings, ShoppingBag, Users } from "lucide-react"
+import { useDemoMode } from "@/contexts/demo-mode-context"
 
 export default function AdminPage() {
+  const { isDemoMode } = useDemoMode()
   return (
     <>
       <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
@@ -37,7 +39,7 @@ export default function AdminPage() {
           <CardContent className="p-6">
             <div className="space-y-2">
               <div className="text-4xl font-bold text-foreground">
-                $ 46.99
+                $ {isDemoMode ? "46.99" : "0.00"}
               </div>
               <p className="text-sm text-muted-foreground">
                 Ventas Totales
@@ -55,7 +57,7 @@ export default function AdminPage() {
                   <ShoppingBag className="h-6 w-6 text-white" />
                 </div>
                 <div className="space-y-1">
-                  <div className="text-2xl font-bold">2</div>
+                  <div className="text-2xl font-bold">{isDemoMode ? "2" : "0"}</div>
                   <p className="text-sm text-muted-foreground">
                     Pedidos entregados
                   </p>
@@ -71,7 +73,7 @@ export default function AdminPage() {
                   <Package className="h-6 w-6 text-white" />
                 </div>
                 <div className="space-y-1">
-                  <div className="text-2xl font-bold">0</div>
+                  <div className="text-2xl font-bold">{isDemoMode ? "0" : "0"}</div>
                   <p className="text-sm text-muted-foreground">
                     Productos vendidos
                   </p>
@@ -87,7 +89,7 @@ export default function AdminPage() {
                   <Users className="h-6 w-6 text-white" />
                 </div>
                 <div className="space-y-1">
-                  <div className="text-2xl font-bold">2</div>
+                  <div className="text-2xl font-bold">{isDemoMode ? "2" : "0"}</div>
                   <p className="text-sm text-muted-foreground">
                     Nuevos Clientes
                   </p>
@@ -103,7 +105,7 @@ export default function AdminPage() {
                   <Settings className="h-6 w-6 text-white" />
                 </div>
                 <div className="space-y-1">
-                  <div className="text-2xl font-bold">0</div>
+                  <div className="text-2xl font-bold">{isDemoMode ? "0" : "0"}</div>
                   <p className="text-sm text-muted-foreground">
                     Cupones aplicados
                   </p>
@@ -134,7 +136,14 @@ export default function AdminPage() {
               <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
                 <FileText className="h-6 w-6 text-muted-foreground/50" />
               </div>
-              <p className="text-sm text-muted-foreground">Sin resultados</p>
+              <p className="text-sm text-muted-foreground">
+                {isDemoMode ? "Sin resultados" : "Aún no hay productos vendidos"}
+              </p>
+              {!isDemoMode && (
+                <p className="text-xs text-muted-foreground text-center max-w-sm">
+                  Cuando tengas ventas, aquí aparecerán tus productos más populares
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
