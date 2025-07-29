@@ -43,6 +43,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
 import { useDemoMode } from "@/contexts/demo-mode-context"
+import { AddBodegonModal } from "@/components/modals/add-bodegon-modal"
+import { EditBodegonModal } from "@/components/modals/edit-bodegon-modal"
+import { DeleteBodegonModal } from "@/components/modals/delete-bodegon-modal"
+import { useBodegones } from "@/hooks/use-bodegones"
+import { useRouter } from "next/navigation"
 
 const demoBodegones = [
   {
@@ -79,10 +84,38 @@ const demoBodegones = [
 
 export default function BodegonesPage() {
   const { isDemoMode } = useDemoMode()
+  const { bodegones: supabaseBodegones, loading, error, refreshBodegones, isConfigured } = useBodegones()
+  const router = useRouter()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [editingBodegon, setEditingBodegon] = useState<any>(null)
+  const [deletingBodegon, setDeletingBodegon] = useState<any>(null)
+  const [activeFilter, setActiveFilter] = useState("all")
   
-  const bodegones = isDemoMode ? demoBodegones : []
+  // Usar datos de Supabase si está configurado y no está en modo demo
+  const allBodegones = isDemoMode 
+    ? demoBodegones 
+    : isConfigured 
+      ? supabaseBodegones.map(bodegon => ({
+          id: bodegon.id,
+          name: bodegon.name,
+          productCount: 0, // Por ahora 0, después podemos contar productos
+          status: bodegon.is_active === false ? "Inactivo" : "Activo"
+        }))
+      : []
+
+  // Filtrar bodegones basado en la tab activa
+  const bodegones = allBodegones.filter(bodegon => {
+    switch (activeFilter) {
+      case "active":
+        return bodegon.status === "Activo"
+      case "inactive":
+        return bodegon.status === "Inactivo"
+      default:
+        return true // "all" muestra todos
+    }
+  })
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -159,7 +192,11 @@ export default function BodegonesPage() {
                 <DropdownMenuItem>Desactivar seleccionados</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm" className="flex-1 sm:flex-none justify-center">
+            <Button 
+              size="sm" 
+              className="flex-1 sm:flex-none justify-center"
+              onClick={() => setIsAddModalOpen(true)}
+            >
               <Plus className="h-4 w-4 mr-2" />
               <span className="hidden xs:inline">Agregar bodegón</span>
               <span className="xs:hidden">Agregar</span>
@@ -169,15 +206,11 @@ export default function BodegonesPage() {
 
         {/* Filter tabs */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <Tabs defaultValue="all" className="w-auto overflow-x-auto">
-            <TabsList className="grid w-full grid-cols-5 sm:w-auto sm:flex">
+          <Tabs defaultValue="all" className="w-auto overflow-x-auto" onValueChange={(value) => setActiveFilter(value)}>
+            <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:flex">
               <TabsTrigger value="all">Todos</TabsTrigger>
               <TabsTrigger value="active">Activos</TabsTrigger>
-              <TabsTrigger value="pending" className="text-xs sm:text-sm">Pendientes</TabsTrigger>
-              <TabsTrigger value="inactive">Inactivos</TabsTrigger>
-              <TabsTrigger value="add" className="text-muted-foreground">
-                <Plus className="h-4 w-4" />
-              </TabsTrigger>
+              <TabsTrigger value="inactive" className="text-xs sm:text-sm">Inactivos</TabsTrigger>
             </TabsList>
           </Tabs>
           <div className="flex items-center gap-2">
@@ -218,8 +251,39 @@ export default function BodegonesPage() {
           </div>
         </div>
 
+        {/* Error message */}
+        {!isDemoMode && error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-red-800">Error al cargar bodegones</p>
+                <p className="text-xs text-red-600 mt-1">{error}</p>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="mt-2 h-7"
+                  onClick={refreshBodegones}
+                >
+                  Reintentar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {!isDemoMode && loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
+              <p className="text-sm text-muted-foreground">Cargando bodegones...</p>
+            </div>
+          </div>
+        )}
+
         {/* Bodegones table */}
-        {bodegones.length > 0 ? (
+        {!loading && bodegones.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -270,12 +334,27 @@ export default function BodegonesPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Editar</DropdownMenuItem>
-                            <DropdownMenuItem>Ver productos</DropdownMenuItem>
-                            <DropdownMenuItem>
-                              {bodegon.status === "Activo" ? "Desactivar" : "Activar"}
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                if (isDemoMode) return
+                                const fullBodegon = supabaseBodegones.find(b => b.id === bodegon.id)
+                                if (fullBodegon) {
+                                  router.push(`/admin/bodegones/${bodegon.id}`)
+                                }
+                              }}
+                            >
+                              Editar
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => {
+                                if (isDemoMode) return
+                                const fullBodegon = supabaseBodegones.find(b => b.id === bodegon.id)
+                                if (fullBodegon) {
+                                  setDeletingBodegon(fullBodegon)
+                                }
+                              }}
+                            >
                               Eliminar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -294,17 +373,34 @@ export default function BodegonesPage() {
             </div>
             <div className="text-center space-y-3">
               <p className="text-sm font-medium text-muted-foreground">
-                {isDemoMode ? "No hay bodegones que coincidan con los filtros" : "No tienes bodegones aún"}
+                {isDemoMode 
+                  ? "No hay bodegones que coincidan con los filtros" 
+                  : !isConfigured
+                    ? "Configura Supabase para ver tus bodegones"
+                    : activeFilter === "active"
+                      ? "No hay bodegones activos"
+                      : activeFilter === "inactive"
+                        ? "No hay bodegones inactivos"
+                        : "No tienes bodegones aún"
+                }
               </p>
-              {!isDemoMode && (
+              {!isDemoMode && !isConfigured && (
+                <p className="text-xs text-muted-foreground max-w-sm">
+                  Ve a Configuraciones → Integraciones para configurar Supabase
+                </p>
+              )}
+              {!isDemoMode && isConfigured && (
                 <p className="text-xs text-muted-foreground max-w-sm">
                   Agrega bodegones para expandir tu red de distribución y llegar a más clientes
                 </p>
               )}
             </div>
-            {!isDemoMode && (
+            {!isDemoMode && isConfigured && (
               <div className="pt-2">
-                <Button size="sm">
+                <Button 
+                  size="sm"
+                  onClick={() => setIsAddModalOpen(true)}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Agregar bodegón
                 </Button>
@@ -312,6 +408,44 @@ export default function BodegonesPage() {
             )}
           </div>
         )}
+
+        <AddBodegonModal 
+          open={isAddModalOpen}
+          onOpenChange={(open) => {
+            setIsAddModalOpen(open)
+            // Refrescar lista cuando se cierre el modal y no esté en modo demo
+            if (!open && !isDemoMode && isConfigured) {
+              refreshBodegones()
+            }
+          }}
+        />
+
+        <EditBodegonModal 
+          open={!!editingBodegon}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingBodegon(null)
+            }
+          }}
+          bodegon={editingBodegon}
+          onSuccess={() => {
+            refreshBodegones()
+          }}
+        />
+
+        <DeleteBodegonModal 
+          open={!!deletingBodegon}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeletingBodegon(null)
+            }
+          }}
+          bodegon={deletingBodegon}
+          onSuccess={() => {
+            refreshBodegones()
+            router.push('/admin/bodegones')
+          }}
+        />
       </div>
     </>
   )
