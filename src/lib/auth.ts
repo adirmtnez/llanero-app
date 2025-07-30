@@ -153,15 +153,27 @@ export async function signOut(): Promise<{ error: Error | null }> {
 export async function getCurrentUser(): Promise<AuthUser | null> {
   try {
     if (!supabase) {
+      console.log('getCurrentUser: Supabase not configured')
       return null
     }
+
+    // First check if we have a session in localStorage
+    const { data: { session } } = await supabase.auth.getSession()
+    console.log('getCurrentUser: Session check:', session ? 'session exists' : 'no session')
 
     const { data: { user }, error } = await supabase.auth.getUser()
     
-    if (error || !user) {
+    if (error) {
+      console.error('getCurrentUser: Error getting user:', error)
+      return null
+    }
+    
+    if (!user) {
+      console.log('getCurrentUser: No user found')
       return null
     }
 
+    console.log('getCurrentUser: User found:', user.email)
     return {
       id: user.id,
       email: user.email || '',

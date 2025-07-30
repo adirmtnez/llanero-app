@@ -35,6 +35,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [isConfigured] = useState(() => isSupabaseConfigured())
 
+  console.log('AuthProvider render:', { user: user?.email, loading, isConfigured })
+
   useEffect(() => {
     let unsubscribe: (() => void) | undefined
 
@@ -42,19 +44,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (isConfigured) {
         // Supabase mode
         try {
-          // Get current user
-          const currentUser = await getCurrentUser()
-          setUser(currentUser)
+          console.log('AuthProvider: Initializing Supabase auth...')
           
-          // Listen to auth changes
+          // Listen to auth changes first (this will handle initial session)
           unsubscribe = onAuthStateChange((user) => {
+            console.log('Auth state changed:', user ? user.email : 'logged out')
             setUser(user)
+            setLoading(false)
           })
+          
+          // Get current user to initialize state immediately
+          console.log('AuthProvider: Getting current user...')
+          const currentUser = await getCurrentUser()
+          console.log('AuthProvider: Current user result:', currentUser ? currentUser.email : 'no user')
+          
+          if (currentUser) {
+            setUser(currentUser)
+          }
+          setLoading(false)
         } catch (error) {
           console.error('Error initializing auth:', error)
+          setLoading(false)
         }
       } else {
         // Mock mode
+        console.log('AuthProvider: Using mock mode')
         setTimeout(() => {
           const mockUser: AuthUser = {
             id: "mock-user-id",
@@ -62,16 +76,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             full_name: "Admin Usuario"
           }
           setUser(mockUser)
+          setLoading(false)
         }, 1000)
       }
-      
-      setLoading(false)
     }
 
     initAuth()
 
     return () => {
       if (unsubscribe) {
+        console.log('AuthProvider: Cleaning up auth state listener')
         unsubscribe()
       }
     }

@@ -16,8 +16,19 @@ export default function AdminLayout({
   const { user, loading } = useAuth()
   const router = useRouter()
 
+  console.log('AdminLayout render:', { user: user?.email, loading })
+
   useEffect(() => {
+    console.log('AdminLayout: Component mounted')
+    return () => {
+      console.log('AdminLayout: Component unmounted')
+    }
+  }, [])
+
+  useEffect(() => {
+    console.log('AdminLayout: Auth state effect:', { user: user?.email, loading })
     if (!loading && !user) {
+      console.log('AdminLayout: Redirecting to auth - no user found')
       router.push("/auth")
     }
   }, [user, loading, router])
