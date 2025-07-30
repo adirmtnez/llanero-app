@@ -1,4 +1,4 @@
-import { supabase } from "./supabase"
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 
 /**
  * Generate a simple unique ID using timestamp and random number
@@ -10,7 +10,46 @@ function generateUniqueId(): string {
 }
 
 /**
- * Upload a file to Supabase Storage bucket 'adminapp'
+ * Create S3 client for Supabase
+ */
+function createS3Client() {
+  const accessKeyId = process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID
+  const secretAccessKey = process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY
+  const region = process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-2'
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+
+  console.log('🔍 S3 Environment Check:', {
+    hasAccessKeyId: !!accessKeyId,
+    hasSecretAccessKey: !!secretAccessKey,
+    region,
+    hasSupabaseUrl: !!supabaseUrl,
+  })
+
+  if (!accessKeyId || !secretAccessKey || !supabaseUrl) {
+    console.error('❌ Missing credentials:', {
+      accessKeyId: accessKeyId ? 'Present' : 'Missing',
+      secretAccessKey: secretAccessKey ? 'Present' : 'Missing',
+      supabaseUrl: supabaseUrl ? 'Present' : 'Missing'
+    })
+    throw new Error('Missing S3 credentials or Supabase URL')
+  }
+
+  // Use the S3 endpoint from your dashboard
+  const endpoint = 'https://zykwuzuukrmgztpgnbth.supabase.co/storage/v1/s3'
+
+  return new S3Client({
+    region,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+    endpoint,
+    forcePathStyle: true, // Required for Supabase
+  })
+}
+
+/**
+ * Upload a file using AWS S3 SDK directly to Supabase Storage
  * @param file - The file to upload
  * @param folder - Folder within the bucket (e.g., 'bodegons', 'restaurants')
  * @param filename - Custom filename (optional, will generate UUID if not provided)
@@ -21,7 +60,7 @@ export async function uploadFileToStorage(
   folder: string,
   filename?: string
 ): Promise<{ url: string | null; error?: string }> {
-  console.log('🔧 Starting file upload:', { 
+  console.log('🔧 Starting S3 file upload:', { 
     fileName: file.name, 
     fileSize: file.size, 
     folder, 
@@ -29,71 +68,50 @@ export async function uploadFileToStorage(
   })
 
   try {
-    if (!supabase) {
-      console.error('❌ Supabase client not configured')
-      return { url: null, error: "Supabase no está configurado" }
-    }
-
-    // Validate file
-    if (!file || file.size === 0) {
-      return { url: null, error: "Archivo inválido o vacío" }
-    }
+    // Create S3 client
+    const s3Client = createS3Client()
+    const bucket = process.env.NEXT_PUBLIC_AWS_S3_BUCKET || 'adminapp'
 
     // Generate filename if not provided
     const fileExt = file.name.split('.').pop()?.toLowerCase()
-    const fileName = filename || `file-${generateUniqueId()}.${fileExt}`
-    const filePath = `${folder}/${fileName}`
+    const fileName = filename ? `${filename}.${fileExt}` : `file-${generateUniqueId()}.${fileExt}`
+    const key = `${folder}/${fileName}`
 
-    console.log('📁 Upload path:', filePath)
+    console.log('📁 S3 Upload key:', key)
 
-    // Upload file to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from('adminapp')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      })
+    // Convert File to ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = new Uint8Array(arrayBuffer)
 
-    if (error) {
-      console.error('❌ Storage upload error:', error)
-      
-      // Check if it's a storage policy error
-      if (error.message.includes('row-level security policy') || error.message.includes('policy')) {
-        return { 
-          url: null, 
-          error: `Políticas de Storage no configuradas: ${error.message}` 
-        }
-      }
-      
-      // Check if it's a bucket error
-      if (error.message.includes('bucket')) {
-        return { 
-          url: null, 
-          error: `Error de bucket: ${error.message}` 
-        }
-      }
-      
-      return { url: null, error: error.message }
-    }
+    // Prepare upload command
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type,
+      CacheControl: 'max-age=3600',
+    })
 
-    console.log('✅ File uploaded successfully:', data)
+    // Upload to S3
+    const result = await s3Client.send(command)
+    console.log('✅ S3 upload successful:', result)
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('adminapp')
-      .getPublicUrl(filePath)
+    // Generate public URL
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const projectId = supabaseUrl.split('//')[1].split('.')[0]
+    const publicUrl = `https://${projectId}.supabase.co/storage/v1/object/public/${bucket}/${key}`
+    
+    console.log('🔗 Public URL generated:', publicUrl)
+    return { url: publicUrl }
 
-    console.log('🔗 Public URL generated:', urlData.publicUrl)
-
-    return { url: urlData.publicUrl }
   } catch (error: any) {
-    console.error('💥 Unexpected error in uploadFileToStorage:', error)
-    return { url: null, error: `Error inesperado: ${error.message}` }
+    console.error('💥 S3 upload error:', error)
+    return { url: null, error: `Error S3: ${error.message}` }
   }
 }
 
 /**
- * Delete a file from Supabase Storage bucket 'adminapp'
+ * Delete a file using AWS S3 SDK
  * @param filePath - Full path to the file in storage
  * @returns Promise<{success: boolean, error?: string}>
  */
@@ -101,25 +119,28 @@ export async function deleteFileFromStorage(
   filePath: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    if (!supabase) {
-      return { success: false, error: "Supabase no está configurado" }
-    }
+    // Create S3 client
+    const s3Client = createS3Client()
+    const bucket = process.env.NEXT_PUBLIC_AWS_S3_BUCKET || 'adminapp'
 
-    // Extract the path without the base URL
-    const pathOnly = filePath.replace(/.*\/adminapp\//, '')
+    // Extract the key from the full URL
+    const key = filePath.replace(/.*\/public\/[^/]+\//, '')
+    console.log('🗑️ Deleting S3 key:', key)
 
-    const { error } = await supabase.storage
-      .from('adminapp')
-      .remove([pathOnly])
+    // Prepare delete command
+    const command = new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    })
 
-    if (error) {
-      console.error('Error deleting file:', error)
-      return { success: false, error: error.message }
-    }
-
+    // Delete from S3
+    const result = await s3Client.send(command)
+    console.log('✅ S3 delete successful:', result)
+    
     return { success: true }
+
   } catch (error: any) {
-    console.error('Error in deleteFileFromStorage:', error)
+    console.error('Error in S3 deleteFileFromStorage:', error)
     return { success: false, error: error.message || 'Error desconocido al eliminar archivo' }
   }
 }
@@ -131,7 +152,7 @@ export async function deleteFileFromStorage(
  * @returns Promise<{url: string, error?: string}>
  */
 export function uploadBodegonLogo(file: File, bodegonId: string) {
-  return uploadFileToStorage(file, 'bodegons/logos', `bodegon-${bodegonId}-logo`)
+  return uploadFileToStorage(file, 'bodegons', `bodegon-${bodegonId}-logo`)
 }
 
 /**
@@ -141,7 +162,7 @@ export function uploadBodegonLogo(file: File, bodegonId: string) {
  * @returns Promise<{url: string, error?: string}>
  */
 export function uploadRestaurantLogo(file: File, restaurantId: string) {
-  return uploadFileToStorage(file, 'restaurants/logos', `restaurant-${restaurantId}-logo`)
+  return uploadFileToStorage(file, 'restaurants', `restaurant-${restaurantId}-logo`)
 }
 
 /**
@@ -151,5 +172,45 @@ export function uploadRestaurantLogo(file: File, restaurantId: string) {
  * @returns Promise<{url: string, error?: string}>
  */
 export function uploadRestaurantCover(file: File, restaurantId: string) {
-  return uploadFileToStorage(file, 'restaurants/covers', `restaurant-${restaurantId}-cover`)
+  return uploadFileToStorage(file, 'restaurants', `restaurant-${restaurantId}-cover`)
+}
+
+/**
+ * Upload product image
+ * @param file - Product image file
+ * @param productId - ID of the product
+ * @param imageIndex - Index of the image (for multiple images)
+ * @returns Promise<{url: string, error?: string}>
+ */
+export function uploadProductImage(file: File, productId: string, imageIndex?: number) {
+  const filename = imageIndex !== undefined 
+    ? `product-${productId}-${imageIndex}` 
+    : `product-${productId}`
+  return uploadFileToStorage(file, 'products', filename)
+}
+
+/**
+ * Upload file to a specific S3 bucket
+ * @param file - The file to upload
+ * @param folder - Folder within the bucket
+ * @param filename - Custom filename
+ * @param bucketName - Override the default bucket
+ * @returns Promise<{url: string, error?: string}>
+ */
+export function uploadToCustomBucket(
+  file: File, 
+  folder: string, 
+  filename: string, 
+  bucketName: string
+) {
+  // Temporarily override the bucket for this upload
+  const originalBucket = process.env.NEXT_PUBLIC_AWS_S3_BUCKET
+  process.env.NEXT_PUBLIC_AWS_S3_BUCKET = bucketName
+  
+  const result = uploadFileToStorage(file, folder, filename)
+  
+  // Restore original bucket
+  process.env.NEXT_PUBLIC_AWS_S3_BUCKET = originalBucket
+  
+  return result
 }
