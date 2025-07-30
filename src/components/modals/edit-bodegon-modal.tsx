@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSupabaseConfig } from "@/hooks/use-supabase-config"
-import { createClient } from "@supabase/supabase-js"
 import {
   Dialog,
   DialogContent,
@@ -54,7 +52,6 @@ export function EditBodegonModal({
   bodegon,
   onSuccess 
 }: EditBodegonModalProps) {
-  const { createSupabaseClient, isConfigValid, config } = useSupabaseConfig()
   const [formData, setFormData] = useState<BodegonForm>({
     nombre: "",
     direccion: "",
@@ -117,10 +114,6 @@ export function EditBodegonModal({
   }
 
   const handleSave = async () => {
-    if (!isConfigValid || !config.serviceKey) {
-      setError("Configuración de Supabase incompleta. Ve a Configuraciones → Integraciones.")
-      return
-    }
 
     if (!bodegon) {
       setError("No se encontró el bodegón a editar")
@@ -141,18 +134,8 @@ export function EditBodegonModal({
     setError("")
 
     try {
-      const supabase = createClient(config.url, config.serviceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        },
-        global: {
-          headers: {
-            'apikey': config.serviceKey,
-            'Authorization': `Bearer ${config.serviceKey}`
-          }
-        }
-      })
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
       // Datos del bodegón a actualizar
       const bodegonData = {
@@ -163,49 +146,14 @@ export function EditBodegonModal({
         logo_url: bodegon.logo_url
       }
 
-      // Subir logo si existe (opcional - requiere bucket configurado)
-      try {
-        if (formData.logo) {
-          // Crear nombre único para evitar conflictos
-          const logoFileName = `logo_${bodegon.id}_${Date.now()}_${formData.logo.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-          console.log('Subiendo logo:', logoFileName)
-          
-          const { data: logoData, error: logoError } = await supabase.storage
-            .from('bodegons')
-            .upload(`logos/${logoFileName}`, formData.logo)
-
-          if (logoError) {
-            console.warn('Error subiendo logo (continuando con logo actual):', logoError)
-          } else {
-            const { data: { publicUrl: logoUrl } } = supabase.storage
-              .from('bodegons')
-              .getPublicUrl(`logos/${logoFileName}`)
-            
-            console.log('Logo subido exitosamente:', logoUrl)
-            bodegonData.logo_url = logoUrl
-          }
-        }
-      } catch (storageError: any) {
-        console.warn('Storage no configurado, continuando sin cambios de archivos:', storageError)
-        // Mostrar una advertencia más amigable si se intentó subir archivo
-        if (formData.logo && storageError?.message?.includes('Bucket not found')) {
-          console.info('💡 Para subir archivos, crea un bucket llamado "bodegons" en Supabase Storage')
-        }
+      // Mock file upload
+      if (formData.logo) {
+        console.log('Mock: Uploading logo:', formData.logo.name)
+        bodegonData.logo_url = 'mock-logo-url'
       }
 
-      // Actualizar bodegón en la base de datos
-      console.log('Datos a actualizar en la base de datos:', bodegonData)
-      const { data, error: updateError } = await supabase
-        .from('bodegons')
-        .update(bodegonData)
-        .eq('id', bodegon.id)
-        .select()
-
-      console.log('Respuesta de actualización:', { data, error: updateError })
-
-      if (updateError) {
-        throw updateError
-      }
+      // Mock database update
+      console.log('Mock: Updating bodegon with data:', bodegonData)
 
       setSuccess(true)
       setTimeout(() => {
@@ -366,7 +314,7 @@ export function EditBodegonModal({
           <Button
             type="button"
             onClick={handleSave}
-            disabled={isLoading || !isConfigValid || !config.serviceKey}
+            disabled={isLoading}
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -1,8 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useSupabaseConfig } from "@/hooks/use-supabase-config"
-import { createClient } from "@supabase/supabase-js"
 import {
   Dialog,
   DialogContent,
@@ -44,7 +42,6 @@ export function DeleteBodegonModal({
   bodegon,
   onSuccess 
 }: DeleteBodegonModalProps) {
-  const { config, isConfigValid } = useSupabaseConfig()
   const [confirmationText, setConfirmationText] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -59,10 +56,6 @@ export function DeleteBodegonModal({
   const isConfirmationValid = bodegon && confirmationText.trim() === bodegon.name
 
   const handleDelete = async () => {
-    if (!isConfigValid || !config.serviceKey) {
-      setError("Configuración de Supabase incompleta. Ve a Configuraciones → Integraciones.")
-      return
-    }
 
     if (!bodegon) {
       setError("No se encontró el bodegón a eliminar")
@@ -78,28 +71,11 @@ export function DeleteBodegonModal({
     setError("")
 
     try {
-      const supabase = createClient(config.url, config.serviceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        },
-        global: {
-          headers: {
-            'apikey': config.serviceKey,
-            'Authorization': `Bearer ${config.serviceKey}`
-          }
-        }
-      })
-
-      // Eliminar bodegón de la base de datos
-      const { error: deleteError } = await supabase
-        .from('bodegons')
-        .delete()
-        .eq('id', bodegon.id)
-
-      if (deleteError) {
-        throw deleteError
-      }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Mock deletion
+      console.log('Mock: Deleting bodegon with id:', bodegon.id)
 
       setSuccess(true)
       setTimeout(() => {
@@ -227,7 +203,7 @@ export function DeleteBodegonModal({
             type="button"
             variant="destructive"
             onClick={handleDelete}
-            disabled={!isConfirmationValid || isLoading || !isConfigValid || !config.serviceKey}
+            disabled={!isConfirmationValid || isLoading}
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

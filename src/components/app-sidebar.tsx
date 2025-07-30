@@ -57,13 +57,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       email: "admin@llanero-app.com",
       avatar: "/avatars/admin.jpg",
     },
-    teams: [
-      {
-        name: "Llanero App",
-        logo: GalleryVerticalEnd,
-        plan: "Admin Panel",
-      },
-    ],
     navMain: [
       {
         title: "Inicio",
@@ -141,7 +134,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" className="bg-[#EBEBEB]" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />

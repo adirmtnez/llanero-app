@@ -120,3 +120,104 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Estilos específicos para la aplicación de cliente */
+:root {
+  --client-primary: #FA7E0B; /* Naranja para botones primarios */
+  --client-secondary: #EEF0F2; /* Gris claro para botones secundarios */
+  --client-accent: #6D130A; /* Rojo vino para acentos */
+}
+
+/* Componentes de cliente */
+.client-button {
+  font-size: 16px;
+  font-weight: 500;
+  min-height: 56px;
+  border-radius: 50px;
+  background-color: var(--client-primary);
+  color: white;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.client-button:hover {
+  background-color: color-mix(in srgb, var(--client-primary) 90%, black);
+}
+
+.client-button.secondary {
+  background-color: var(--client-secondary);
+  color: var(--client-accent);
+}
+
+.client-button.secondary:hover {
+  background-color: color-mix(in srgb, var(--client-secondary) 90%, black);
+}
+
+.client-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.client-button.variant-outline {
+  background-color: transparent;
+  border: 2px solid var(--client-primary);
+  color: var(--client-primary);
+}
+
+.client-button.variant-outline:hover {
+  background-color: var(--client-primary);
+  color: white;
+}
+
+.client-button.variant-ghost {
+  background-color: transparent;
+  color: var(--client-accent);
+  border: none;
+}
+
+.client-button.variant-ghost:hover {
+  background-color: color-mix(in srgb, var(--client-accent) 10%, transparent);
+}
+
+.client-input {
+  border-radius: 50px;
+  border: 1px solid #e5e7eb;
+  padding: 0 20px;
+  height: 56px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.client-input:focus {
+  outline: none;
+  border-color: var(--client-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--client-primary) 20%, transparent);
+}
+
+.client-input:hover {
+  border-color: var(--client-primary);
+}
+
+/* Tabs específicos para cliente */
+.client-tabs-list {
+  min-height: 56px;
+  border-radius: 50px;
+  background-color: var(--client-secondary);
+  padding: 4px;
+  margin-bottom: 24px;
+}
+
+.client-tabs-trigger {
+  min-height: 48px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  color: var(--client-accent);
+}
+
+.client-tabs-trigger[data-state="active"] {
+  background-color: white;
+  color: var(--client-accent);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

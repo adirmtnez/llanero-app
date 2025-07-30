@@ -1,8 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useSupabaseConfig } from "@/hooks/use-supabase-config"
-import { createClient } from "@supabase/supabase-js"
+import { useState, useEffect, useCallback } from "react"
 
 export interface Restaurant {
   id: string
@@ -16,88 +14,67 @@ export interface Restaurant {
   is_active?: boolean
 }
 
+const mockRestaurants: Restaurant[] = [
+  {
+    id: "1",
+    name: "Pizza Express",
+    phone_number: "+1234567890",
+    logo_url: null,
+    cover_image: null,
+    delivery_available: true,
+    pickup_available: true,
+    opening_hours: "10:00-22:00",
+    is_active: true
+  },
+  {
+    id: "2", 
+    name: "Burger Palace",
+    phone_number: "+1234567891",
+    logo_url: null,
+    cover_image: null,
+    delivery_available: true,
+    pickup_available: false,
+    opening_hours: "11:00-23:00",
+    is_active: true
+  },
+  {
+    id: "3",
+    name: "Tacos El Rincón",
+    phone_number: "+1234567892",
+    logo_url: null,
+    cover_image: null,
+    delivery_available: false,
+    pickup_available: true,
+    opening_hours: "12:00-20:00",
+    is_active: false
+  }
+]
+
 export function useRestaurants() {
-  const { config, isConfigValid } = useSupabaseConfig()
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchRestaurants = async () => {
-    if (!isConfigValid || !config.serviceKey) {
-      setError("Configuración de Supabase incompleta")
-      return
-    }
-
+  const fetchRestaurants = useCallback(async () => {
     setLoading(true)
     setError(null)
 
     try {
-      const supabase = createClient(config.url, config.serviceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        },
-        global: {
-          headers: {
-            'apikey': config.serviceKey,
-            'Authorization': `Bearer ${config.serviceKey}`
-          }
-        }
-      })
-
-      console.log('Intentando obtener restaurantes...')
-      
-      // Intentar diferentes enfoques para verificar la tabla
-      console.log('Probando acceso a tabla restaurants...')
-      
-      // Opción 1: Consulta básica
-      let { data, error: fetchError } = await supabase
-        .from('restaurants')
-        .select('*')
-
-      console.log('Opción 1 - select *:', { data, error: fetchError })
-
-      // Si falla, intentar con esquema explícito
-      if (fetchError) {
-        console.log('Probando con esquema public explícito...')
-        const result2 = await supabase
-          .from('public.restaurants')
-          .select('*')
-        
-        console.log('Opción 2 - public.restaurants:', result2)
-        
-        // Si sigue fallando, intentar solo contar
-        if (result2.error) {
-          console.log('Probando solo contar registros...')
-          const result3 = await supabase
-            .from('restaurants')
-            .select('id', { count: 'exact' })
-          
-          console.log('Opción 3 - count:', result3)
-        } else {
-          data = result2.data
-          fetchError = result2.error
-        }
-      }
-
-      if (fetchError) {
-        console.error('Error específico:', JSON.stringify(fetchError, null, 2))
-        throw fetchError
-      }
-
-      setRestaurants(data || [])
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500))
+      setRestaurants(mockRestaurants)
     } catch (err: any) {
       console.error('Error fetching restaurants:', err)
       setError(err.message || 'Error al cargar restaurantes')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  // Cargar restaurantes al montar el componente
+  // Load restaurants on component mount
   useEffect(() => {
     fetchRestaurants()
-  }, [isConfigValid, config.serviceKey])
+  }, [fetchRestaurants])
 
   const refreshRestaurants = () => {
     fetchRestaurants()
@@ -108,6 +85,6 @@ export function useRestaurants() {
     loading,
     error,
     refreshRestaurants,
-    isConfigured: isConfigValid && !!config.serviceKey
+    isConfigured: true // Always configured in mock mode
   }
 }

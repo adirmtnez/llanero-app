@@ -1,8 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useSupabaseConfig } from "@/hooks/use-supabase-config"
-import { createClient } from "@supabase/supabase-js"
 import {
   Dialog,
   DialogContent,
@@ -43,7 +41,6 @@ export function DeleteRestaurantModal({
   restaurant,
   onSuccess 
 }: DeleteRestaurantModalProps) {
-  const { config, isConfigValid } = useSupabaseConfig()
   const [confirmationText, setConfirmationText] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -58,10 +55,6 @@ export function DeleteRestaurantModal({
   const isConfirmationValid = restaurant && confirmationText.trim() === restaurant.name
 
   const handleDelete = async () => {
-    if (!isConfigValid || !config.serviceKey) {
-      setError("Configuración de Supabase incompleta. Ve a Configuraciones → Integraciones.")
-      return
-    }
 
     if (!restaurant) {
       setError("No se encontró el restaurante a eliminar")
@@ -77,28 +70,11 @@ export function DeleteRestaurantModal({
     setError("")
 
     try {
-      const supabase = createClient(config.url, config.serviceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        },
-        global: {
-          headers: {
-            'apikey': config.serviceKey,
-            'Authorization': `Bearer ${config.serviceKey}`
-          }
-        }
-      })
-
-      // Eliminar restaurante de la base de datos
-      const { error: deleteError } = await supabase
-        .from('restaurants')
-        .delete()
-        .eq('id', restaurant.id)
-
-      if (deleteError) {
-        throw deleteError
-      }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Mock deletion
+      console.log('Mock: Deleting restaurant with id:', restaurant.id)
 
       setSuccess(true)
       setTimeout(() => {
@@ -226,7 +202,7 @@ export function DeleteRestaurantModal({
             type="button"
             variant="destructive"
             onClick={handleDelete}
-            disabled={!isConfirmationValid || isLoading || !isConfigValid || !config.serviceKey}
+            disabled={!isConfirmationValid || isLoading}
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

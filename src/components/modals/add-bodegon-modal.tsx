@@ -1,8 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useSupabaseConfig } from "@/hooks/use-supabase-config"
-import { createClient } from "@supabase/supabase-js"
 import {
   Dialog,
   DialogContent,
@@ -17,7 +15,6 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { 
   Store, 
-  Upload, 
   X, 
   Loader2,
   AlertTriangle,
@@ -37,7 +34,6 @@ interface BodegonForm {
 }
 
 export function AddBodegonModal({ open, onOpenChange }: AddBodegonModalProps) {
-  const { createSupabaseClient, isConfigValid, config } = useSupabaseConfig()
   const [formData, setFormData] = useState<BodegonForm>({
     nombre: "",
     direccion: "",
@@ -78,16 +74,6 @@ export function AddBodegonModal({ open, onOpenChange }: AddBodegonModalProps) {
   }
 
   const handleSave = async () => {
-    if (!isConfigValid) {
-      setError("Configuración de Supabase incompleta. Ve a Configuraciones → Integraciones.")
-      return
-    }
-
-    if (!config.serviceKey) {
-      setError("Se requiere la clave de servicio (service key) para crear bodegones. Configúrala en Integraciones.")
-      return
-    }
-
     if (!formData.nombre.trim()) {
       setError("El nombre del bodegón es requerido")
       return
@@ -102,81 +88,16 @@ export function AddBodegonModal({ open, onOpenChange }: AddBodegonModalProps) {
     setError("")
 
     try {
-      console.log('Configuración Supabase:', {
-        url: config.url,
-        hasAnonKey: !!config.anonKey,
-        hasServiceKey: !!config.serviceKey,
-        serviceKeyPrefix: config.serviceKey ? config.serviceKey.substring(0, 20) + '...' : 'No configurada'
-      })
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
-      // Usar service key si está disponible para operaciones administrativas
-      const supabase = config.serviceKey 
-        ? createClient(config.url, config.serviceKey, {
-            auth: {
-              autoRefreshToken: false,
-              persistSession: false
-            },
-            global: {
-              headers: {
-                'apikey': config.serviceKey,
-                'Authorization': `Bearer ${config.serviceKey}`
-              }
-            }
-          })
-        : createSupabaseClient()
-
-      // Datos del bodegón
-      const bodegonData = {
+      console.log('Mock: Creating bodegon with data:', {
         name: formData.nombre.trim(),
         address: formData.direccion.trim() || null,
         phone_number: formData.telefono.trim(),
-        is_active: true, // Los nuevos bodegones están activos por defecto
-        logo_url: null as string | null
-      }
-
-      console.log('Datos a insertar:', bodegonData)
-
-      // Subir logo si existe (opcional - requiere bucket configurado)
-      try {
-        if (formData.logo) {
-          const logoFileName = `logo_${Date.now()}_${formData.logo.name}`
-          const { data: logoData, error: logoError } = await supabase.storage
-            .from('bodegons')
-            .upload(`logos/${logoFileName}`, formData.logo)
-
-          if (logoError) {
-            console.warn('Error subiendo logo (continuando sin logo):', logoError)
-          } else {
-            const { data: { publicUrl: logoUrl } } = supabase.storage
-              .from('bodegons')
-              .getPublicUrl(`logos/${logoFileName}`)
-            
-            bodegonData.logo_url = logoUrl
-          }
-        }
-      } catch (storageError: any) {
-        console.warn('Storage no configurado, continuando sin archivos:', storageError)
-        // Mostrar una advertencia más amigable si se intentó subir archivo
-        if (formData.logo && storageError?.message?.includes('Bucket not found')) {
-          console.info('💡 Para subir archivos, crea un bucket llamado "bodegons" en Supabase Storage')
-        }
-      }
-
-      // Insertar bodegón en la base de datos
-      console.log('Intentando insertar en Supabase...')
-      const { data, error: insertError } = await supabase
-        .from('bodegons')
-        .insert([bodegonData])
-
-      console.log('Respuesta de Supabase:')
-      console.log('Data:', data)
-      console.log('Error:', insertError)
-      console.log('Error completo:', JSON.stringify(insertError, null, 2))
-
-      if (insertError) {
-        console.error('Error de inserción:', JSON.stringify(insertError, null, 2))
-        throw insertError
-      }
+        is_active: true,
+        logo_url: formData.logo ? 'mock-logo-url' : null
+      })
 
       setSuccess(true)
       setTimeout(() => {
@@ -186,20 +107,7 @@ export function AddBodegonModal({ open, onOpenChange }: AddBodegonModalProps) {
 
     } catch (error: any) {
       console.error('Error creating bodegon:', error)
-      console.log('Error details:', JSON.stringify(error, null, 2))
-      
-      // Mejor manejo de errores de Supabase
-      let errorMessage = 'Error desconocido al crear el bodegón'
-      
-      if (error?.message) {
-        errorMessage = error.message
-      } else if (typeof error === 'string') {
-        errorMessage = error
-      } else if (error?.error_description) {
-        errorMessage = error.error_description
-      }
-      
-      setError(errorMessage)
+      setError('Error al crear el bodegón')
     } finally {
       setIsLoading(false)
     }
@@ -316,7 +224,7 @@ export function AddBodegonModal({ open, onOpenChange }: AddBodegonModalProps) {
           <Button
             type="button"
             onClick={handleSave}
-            disabled={isLoading || !isConfigValid || !config.serviceKey}
+            disabled={isLoading}
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

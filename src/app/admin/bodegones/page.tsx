@@ -84,7 +84,7 @@ const demoBodegones = [
 
 export default function BodegonesPage() {
   const { isDemoMode } = useDemoMode()
-  const { bodegones: supabaseBodegones, loading, error, refreshBodegones, isConfigured } = useBodegones()
+  const { bodegones: mockBodegones, loading, error, refreshBodegones, isConfigured } = useBodegones()
   const router = useRouter()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -93,17 +93,15 @@ export default function BodegonesPage() {
   const [deletingBodegon, setDeletingBodegon] = useState<any>(null)
   const [activeFilter, setActiveFilter] = useState("all")
   
-  // Usar datos de Supabase si está configurado y no está en modo demo
+  // Usar datos mock o demo
   const allBodegones = isDemoMode 
     ? demoBodegones 
-    : isConfigured 
-      ? supabaseBodegones.map(bodegon => ({
-          id: bodegon.id,
-          name: bodegon.name,
-          productCount: 0, // Por ahora 0, después podemos contar productos
-          status: bodegon.is_active === false ? "Inactivo" : "Activo"
-        }))
-      : []
+    : mockBodegones.map(bodegon => ({
+        id: bodegon.id,
+        name: bodegon.name,
+        productCount: 0, // Por ahora 0, después podemos contar productos
+        status: bodegon.is_active === false ? "Inactivo" : "Activo"
+      }))
 
   // Filtrar bodegones basado en la tab activa
   const bodegones = allBodegones.filter(bodegon => {
@@ -337,7 +335,7 @@ export default function BodegonesPage() {
                             <DropdownMenuItem 
                               onClick={() => {
                                 if (isDemoMode) return
-                                const fullBodegon = supabaseBodegones.find(b => b.id === bodegon.id)
+                                const fullBodegon = mockBodegones.find(b => b.id === bodegon.id)
                                 if (fullBodegon) {
                                   router.push(`/admin/bodegones/${bodegon.id}`)
                                 }
@@ -349,7 +347,7 @@ export default function BodegonesPage() {
                               className="text-red-600"
                               onClick={() => {
                                 if (isDemoMode) return
-                                const fullBodegon = supabaseBodegones.find(b => b.id === bodegon.id)
+                                const fullBodegon = mockBodegones.find(b => b.id === bodegon.id)
                                 if (fullBodegon) {
                                   setDeletingBodegon(fullBodegon)
                                 }
@@ -376,7 +374,7 @@ export default function BodegonesPage() {
                 {isDemoMode 
                   ? "No hay bodegones que coincidan con los filtros" 
                   : !isConfigured
-                    ? "Configura Supabase para ver tus bodegones"
+                    ? "Los bodegones se muestran desde datos mock"
                     : activeFilter === "active"
                       ? "No hay bodegones activos"
                       : activeFilter === "inactive"
@@ -386,7 +384,7 @@ export default function BodegonesPage() {
               </p>
               {!isDemoMode && !isConfigured && (
                 <p className="text-xs text-muted-foreground max-w-sm">
-                  Ve a Configuraciones → Integraciones para configurar Supabase
+                  Los bodegones se muestran desde datos mock para demostración
                 </p>
               )}
               {!isDemoMode && isConfigured && (

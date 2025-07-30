@@ -39,8 +39,13 @@ import {
   X
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useDemoMode } from "@/contexts/demo-mode-context"
+import { useBodegonProducts } from "@/hooks/use-bodegon-products"
+import { useCategories } from "@/hooks/use-categories"
+import { DeleteProductModal } from "@/components/modals/delete-product-modal"
+import { BodegonProduct } from "@/types/products"
 
 const demoProducts = [
   {
@@ -83,10 +88,88 @@ const demoProducts = [
 
 export default function ProductosPage() {
   const { isDemoMode } = useDemoMode()
+  const router = useRouter()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<BodegonProduct | null>(null)
+  const [realProducts, setRealProducts] = useState<BodegonProduct[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
   
-  const products = isDemoMode ? demoProducts : []
+  const { getProducts, deleteProduct, loading, formatPrice } = useBodegonProducts()
+  const bodegonCategories = useCategories('bodegon')
+  
+  // Función para obtener el nombre de categoría
+  const getCategoryName = (categoryId?: string) => {
+    if (!categoryId) return "Sin categoría"
+    const category = bodegonCategories.categories.find(cat => cat.id === categoryId)
+    return category?.name || "Sin categoría"
+  }
+
+  // Función para mapear productos reales al formato de la tabla
+  const mapProductToTableFormat = (product: BodegonProduct) => ({
+    id: product.id,
+    name: product.name,
+    sku: product.sku || "N/A",
+    status: product.is_active_product ? "Active" : "Draft",
+    inventory: `${product.quantity_in_pack || 0} en stock`,
+    category: getCategoryName(product.category_id),
+    price: formatPrice(product.price),
+    raw: product // Mantener el objeto original para operaciones
+  })
+
+  const products = isDemoMode ? demoProducts : realProducts.map(mapProductToTableFormat)
+
+  // Cargar productos reales
+  const loadProducts = async () => {
+    if (!isDemoMode) {
+      const result = await getProducts(
+        { search: searchQuery },
+        { page: currentPage, limit: 25 }
+      )
+      setRealProducts(result.products)
+      setTotalPages(result.pagination.totalPages)
+    }
+  }
+
+  // Cargar productos cuando cambie la página, búsqueda o se active el modo real
+  useEffect(() => {
+    loadProducts()
+  }, [currentPage, searchQuery, isDemoMode])
+
+  // Recargar al cambiar el término de búsqueda
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setCurrentPage(1) // Reset to first page on search
+      loadProducts()
+    }, 500) // Debounce search
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery])
+
+  const handleEdit = (product: { id: string }) => {
+    router.push(`/admin/productos/${product.id}/editar`)
+  }
+
+  const handleDelete = (product: BodegonProduct | { id: string, name: string }) => {
+    setSelectedProduct(product as BodegonProduct)
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteConfirm = async (productId: string) => {
+    if (!isDemoMode) {
+      const success = await deleteProduct(productId)
+      if (success) {
+        setShowDeleteModal(false)
+        setSelectedProduct(null)
+        // Recargar productos
+        loadProducts()
+      }
+    } else {
+      console.log("Deleting product:", productId)
+    }
+  }
 
   return (
     <>
@@ -150,7 +233,11 @@ export default function ProductosPage() {
                 <DropdownMenuItem>Eliminar seleccionados</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm" className="flex-1 sm:flex-none justify-center">
+            <Button 
+              size="sm" 
+              className="flex-1 sm:flex-none justify-center"
+              onClick={() => router.push("/admin/productos/agregar")}
+            >
               <Plus className="h-4 w-4 mr-2" />
               <span className="hidden xs:inline">Agregar producto</span>
               <span className="xs:hidden">Agregar</span>
@@ -174,13 +261,14 @@ export default function ProductosPage() {
           <div className="flex items-center gap-2">
             {isSearchExpanded ? (
               <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-background w-full sm:min-w-[300px]">
-                <Search className="h-4 w-4 text-muted-foreground" />
+                <Search className={`h-4 w-4 ${loading ? 'animate-pulse' : ''} text-muted-foreground`} />
                 <Input
                   placeholder="Buscar productos..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="border-0 p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
                   autoFocus
+                  disabled={loading}
                 />
                 <Button 
                   variant="ghost" 
@@ -190,6 +278,7 @@ export default function ProductosPage() {
                     setSearchQuery("")
                   }}
                   className="h-auto p-1"
+                  disabled={loading}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -210,7 +299,13 @@ export default function ProductosPage() {
         </div>
 
         {/* Products table */}
-        {products.length > 0 ? (
+        {loading ? (
+          <div className="border rounded-lg bg-white p-8">
+            <div className="flex items-center justify-center">
+              <div className="text-sm text-muted-foreground">Cargando productos...</div>
+            </div>
+          </div>
+        ) : products.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -272,10 +367,15 @@ export default function ProductosPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Editar</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEdit(product)}>
+                              Editar
+                            </DropdownMenuItem>
                             <DropdownMenuItem>Duplicar</DropdownMenuItem>
                             <DropdownMenuItem>Archivar</DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDelete(product)}
+                            >
                               Eliminar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -288,31 +388,53 @@ export default function ProductosPage() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center space-y-6 py-16">
-            <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-              <Plus className="h-6 w-6 text-muted-foreground/50" />
-            </div>
-            <div className="text-center space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
-                {isDemoMode ? "No hay productos que coincidan con los filtros" : "No tienes productos aún"}
-              </p>
-              {!isDemoMode && (
-                <p className="text-xs text-muted-foreground max-w-sm">
-                  Comienza agregando tu primer producto para gestionar tu inventario
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <div className="flex flex-col items-center justify-center space-y-6 py-16">
+              <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
+                <Plus className="h-6 w-6 text-muted-foreground/50" />
+              </div>
+              <div className="text-center space-y-3">
+                <p className="text-sm font-medium text-muted-foreground">
+                  {isDemoMode ? "No hay productos que coincidan con los filtros" : 
+                   searchQuery ? "No se encontraron productos" : 
+                   "No tienes productos aún"}
                 </p>
+                {!isDemoMode && !searchQuery && (
+                  <p className="text-xs text-muted-foreground max-w-sm">
+                    Los productos se muestran desde datos mock locales
+                  </p>
+                )}
+                {false && (
+                  <p className="text-xs text-muted-foreground max-w-sm">
+                    Comienza agregando tu primer producto para gestionar tu inventario
+                  </p>
+                )}
+                {!isDemoMode && searchQuery && (
+                  <p className="text-xs text-muted-foreground max-w-sm">
+                    Intenta con otros términos de búsqueda o agrega nuevos productos
+                  </p>
+                )}
+              </div>
+              {!isDemoMode && (
+                <div className="pt-2">
+                  <Button size="sm" onClick={() => router.push("/admin/productos/agregar")}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Agregar producto
+                  </Button>
+                </div>
               )}
             </div>
-            {!isDemoMode && (
-              <div className="pt-2">
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar producto
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </div>
+
+      {/* Modals */}      
+      <DeleteProductModal 
+        open={showDeleteModal} 
+        onOpenChange={setShowDeleteModal}
+        product={selectedProduct}
+        onDelete={handleDeleteConfirm}
+      />
     </>
   )
 }

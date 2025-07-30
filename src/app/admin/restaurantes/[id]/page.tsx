@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useSupabaseConfig } from "@/hooks/use-supabase-config"
-import { createClient } from "@supabase/supabase-js"
+import { useRestaurants } from "@/hooks/use-restaurants"
 import { EditRestaurantModal } from "@/components/modals/edit-restaurant-modal"
 import { DeleteRestaurantModal } from "@/components/modals/delete-restaurant-modal"
 import {
@@ -18,14 +17,8 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Table,
   TableBody,
@@ -34,21 +27,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { 
-  ArrowLeft,
-  Search,
-  Settings,
-  Plus,
-  MoreHorizontal,
+  Edit, 
+  Trash2, 
+  Phone, 
   Package,
-  UtensilsCrossed,
-  Trash2
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Loader2,
+  ArrowLeft,
+  Clock
 } from "lucide-react"
 
 interface Restaurant {
@@ -57,6 +46,9 @@ interface Restaurant {
   phone_number: string
   logo_url: string | null
   cover_image: string | null
+  delivery_available?: boolean
+  pickup_available?: boolean
+  opening_hours?: string
   is_active?: boolean
 }
 
@@ -64,78 +56,67 @@ interface Product {
   id: string
   name: string
   price: number
-  status: 'disponible' | 'agotado' | 'pausado'
-  sku?: string
+  category: string
+  stock: number
+  is_active: boolean
 }
 
 export default function RestaurantDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { config, isConfigValid } = useSupabaseConfig()
+  const { restaurants } = useRestaurants()
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState("Todos los estatus...")
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 
-  // Datos demo para productos
-  const demoProducts: Product[] = [
-    {
-      id: "1",
-      name: "product 1",
-      price: 12.00,
-      status: "disponible",
-      sku: "P001"
-    }
-  ]
-
-  useEffect(() => {
-    if (isConfigValid && config.serviceKey && params.id) {
-      fetchRestaurant()
-    }
-  }, [params.id, isConfigValid, config.serviceKey])
-
   const fetchRestaurant = async () => {
-    if (!isConfigValid || !config.serviceKey) {
-      setError("Configuración de Supabase incompleta")
+    if (!params.id) {
+      setError("ID de restaurante no válido")
       setLoading(false)
       return
     }
 
     try {
-      const supabase = createClient(config.url, config.serviceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        },
-        global: {
-          headers: {
-            'apikey': config.serviceKey,
-            'Authorization': `Bearer ${config.serviceKey}`
-          }
-        }
-      })
+      setLoading(true)
+      setError(null)
 
-      const { data, error: fetchError } = await supabase
-        .from('restaurants')
-        .select('*')
-        .eq('id', params.id)
-        .single()
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500))
 
-      if (fetchError) {
-        throw fetchError
+      // Find restaurant in mock data
+      const foundRestaurant = restaurants.find(r => r.id === params.id)
+      
+      if (!foundRestaurant) {
+        throw new Error('Restaurante no encontrado')
       }
 
-      console.log('Datos del restaurante obtenidos:', data)
-      console.log('Logo URL obtenido:', data.logo_url)
-      console.log('Cover Image URL obtenido:', data.cover_image)
+      setRestaurant(foundRestaurant)
+
+      // Mock products for this restaurant
+      const mockProducts: Product[] = [
+        {
+          id: "1",
+          name: "Pizza Margherita",
+          price: 15000,
+          category: "Pizza",
+          stock: 5,
+          is_active: true
+        },
+        {
+          id: "2", 
+          name: "Hamburguesa Clásica",
+          price: 12000,
+          category: "Hamburguesa",
+          stock: 8,
+          is_active: true
+        }
+      ]
       
-      setRestaurant(data)
-      // Por ahora usamos datos demo para productos
-      setProducts(demoProducts)
+      setProducts(mockProducts)
+
     } catch (err: any) {
       console.error('Error fetching restaurant:', err)
       setError(err.message || 'Error al cargar el restaurante')
@@ -144,240 +125,236 @@ export default function RestaurantDetailPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "disponible":
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Disponible</Badge>
-      case "agotado":
-        return <Badge variant="destructive">Agotado</Badge>
-      case "pausado":
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pausado</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
+  useEffect(() => {
+    if (restaurants.length > 0 && params.id) {
+      fetchRestaurant()
     }
+  }, [params.id, restaurants])
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP'
+    }).format(price)
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="flex items-center gap-3">
-          <div className="w-6 h-6 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">Cargando restaurante...</p>
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <p className="text-muted-foreground">Cargando restaurante...</p>
         </div>
       </div>
     )
   }
 
-  if (error || !restaurant) {
+  if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-4">
-        <div className="text-center space-y-2">
-          <p className="text-sm font-medium text-red-600">Error al cargar el restaurante</p>
-          <p className="text-xs text-muted-foreground">{error}</p>
+      <div className="space-y-6">
+        <header className="flex h-16 shrink-0 items-center gap-2 px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver
+          </Button>
+        </header>
+        <div className="flex flex-col items-center justify-center space-y-4 p-8">
+          <Alert variant="destructive" className="max-w-md">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+          <Button onClick={() => router.push('/admin/restaurantes')}>
+            Volver a Restaurantes
+          </Button>
         </div>
-        <Button onClick={() => router.back()} variant="outline">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Volver
-        </Button>
+      </div>
+    )
+  }
+
+  if (!restaurant) {
+    return (
+      <div className="space-y-6">
+        <header className="flex h-16 shrink-0 items-center gap-2 px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver
+          </Button>
+        </header>
+        <div className="flex flex-col items-center justify-center space-y-4 p-8">
+          <Alert variant="destructive" className="max-w-md">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>Restaurante no encontrado</AlertDescription>
+          </Alert>
+          <Button onClick={() => router.push('/admin/restaurantes')}>
+            Volver a Restaurantes
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
     <>
-      <header className="hidden md:flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-        <div className="flex items-center gap-2 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mr-2 data-[orientation=vertical]:h-4"
-          />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="/admin">
-                  Admin
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/admin/restaurantes">
-                  Restaurantes
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{restaurant.name}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+      <header className="flex h-16 shrink-0 items-center gap-2 px-4">
+        <SidebarTrigger className="-ml-1" />
+        <Separator orientation="vertical" className="mr-2 h-4" />
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin/restaurantes">Restaurantes</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{restaurant.name}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
       </header>
 
-      <div className="flex flex-1 flex-col gap-6 p-4 pt-6 md:pt-0 max-w-[1080px] mx-auto w-full">
-        {/* Mobile back button */}
-        <div className="md:hidden">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => router.back()}
-            className="p-0 h-auto"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {restaurant.name}
-          </Button>
-        </div>
-
-        {/* Header with restaurant info and actions */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-              {restaurant.logo_url ? (
-                <img 
-                  src={restaurant.logo_url} 
-                  alt={restaurant.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // Si la imagen falla al cargar, mostrar el icono por defecto
-                    e.currentTarget.style.display = 'none'
-                    e.currentTarget.nextElementSibling?.classList.remove('hidden')
-                  }}
-                />
-              ) : null}
-              <UtensilsCrossed 
-                className={`h-6 w-6 text-muted-foreground ${restaurant.logo_url ? 'hidden' : ''}`} 
-              />
-            </div>
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
             <div>
               <h1 className="text-2xl font-bold">{restaurant.name}</h1>
-              <p className="text-muted-foreground text-sm">
-                Gestiona los productos de este restaurant
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant={restaurant.is_active ? "default" : "secondary"}>
+                  {restaurant.is_active ? (
+                    <>
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Activo
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-3 w-3 mr-1" />
+                      Inactivo
+                    </>
+                  )}
+                </Badge>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setIsEditModalOpen(true)}
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Editar ajustes
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Editar
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-red-600 hover:text-red-700"
-              onClick={() => setIsDeleteModalOpen(true)}
-            >
+            <Button variant="destructive" onClick={() => setIsDeleteModalOpen(true)}>
               <Trash2 className="h-4 w-4 mr-2" />
-              Eliminar restaurant
+              Eliminar
             </Button>
           </div>
         </div>
 
-        {/* Search and filters */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2 flex-1">
-            <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-background flex-1 max-w-md">
-              <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <Input
-                placeholder="Buscar productos..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="border-0 p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[200px] h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Todos los estatus...">Todos los estatus...</SelectItem>
-                <SelectItem value="disponible">Disponible</SelectItem>
-                <SelectItem value="agotado">Agotado</SelectItem>
-                <SelectItem value="pausado">Pausado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Agregar producto
-          </Button>
+        {/* Información del Restaurante */}
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Información del Restaurante</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Teléfono</p>
+                  <p className="text-sm text-muted-foreground">{restaurant.phone_number}</p>
+                </div>
+              </div>
+              {restaurant.opening_hours && (
+                <div className="flex items-center gap-3">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Horario</p>
+                    <p className="text-sm text-muted-foreground">{restaurant.opening_hours}</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Servicios y Estadísticas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Package className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Productos</p>
+                  <p className="text-sm text-muted-foreground">{products.length} productos</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {restaurant.delivery_available && (
+                  <Badge variant="secondary">Delivery</Badge>
+                )}
+                {restaurant.pickup_available && (
+                  <Badge variant="secondary">Pickup</Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Products table */}
-        {products.length > 0 ? (
-          <div className="border rounded-lg bg-white overflow-hidden">
-            <div className="overflow-x-auto">
+        {/* Lista de Productos */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Productos</CardTitle>
+            <CardDescription>
+              Lista de productos disponibles en este restaurante
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {products.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[80px]">SKU</TableHead>
-                    <TableHead className="min-w-[200px]">Producto</TableHead>
-                    <TableHead className="min-w-[100px]">Precio</TableHead>
-                    <TableHead className="min-w-[100px]">Estatus</TableHead>
-                    <TableHead className="w-12"></TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead>Precio</TableHead>
+                    <TableHead>Stock</TableHead>
+                    <TableHead>Estado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {products.map((product) => (
                     <TableRow key={product.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-muted rounded flex items-center justify-center flex-shrink-0">
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <span className="text-xs text-muted-foreground">{product.sku || 'N/A'}</span>
-                        </div>
-                      </TableCell>
                       <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>${product.price.toFixed(2)}</TableCell>
-                      <TableCell>{getStatusBadge(product.status)}</TableCell>
+                      <TableCell>{product.category}</TableCell>
+                      <TableCell>{formatPrice(product.price)}</TableCell>
+                      <TableCell>{product.stock}</TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Editar</DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
-                              Eliminar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Badge variant={product.is_active ? "default" : "secondary"}>
+                          {product.is_active ? "Activo" : "Inactivo"}
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center space-y-6 py-16">
-            <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-              <Package className="h-6 w-6 text-muted-foreground/50" />
-            </div>
-            <div className="text-center space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
-                No hay productos aún
-              </p>
-              <p className="text-xs text-muted-foreground max-w-sm">
-                Agrega productos para que los clientes puedan pedirlos desde tu restaurante
-              </p>
-            </div>
-            <div className="pt-2">
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar producto
-              </Button>
-            </div>
-          </div>
-        )}
+            ) : (
+              <div className="text-center py-8">
+                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No hay productos en este restaurante</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        <EditRestaurantModal 
+        {/* Modales */}
+        <EditRestaurantModal
           open={isEditModalOpen}
           onOpenChange={setIsEditModalOpen}
           restaurant={restaurant}
@@ -387,7 +364,7 @@ export default function RestaurantDetailPage() {
           }}
         />
 
-        <DeleteRestaurantModal 
+        <DeleteRestaurantModal
           open={isDeleteModalOpen}
           onOpenChange={setIsDeleteModalOpen}
           restaurant={restaurant}

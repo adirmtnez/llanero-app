@@ -35,10 +35,16 @@ export default function TestSupabasePage() {
     try {
       const supabase = createSupabaseClient()
       
+      interface TestResult {
+        name: string
+        success: boolean
+        details: string
+      }
+
       const results = {
         success: true,
-        tests: [],
-        projectInfo: {}
+        tests: [] as TestResult[],
+        projectInfo: {} as any
       }
 
       // Test 1: Verificar autenticación

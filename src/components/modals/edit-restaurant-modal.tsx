@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSupabaseConfig } from "@/hooks/use-supabase-config"
-import { createClient } from "@supabase/supabase-js"
+import { Restaurant } from "@/hooks/use-restaurants"
 import {
   Dialog,
   DialogContent,
@@ -23,14 +22,6 @@ import {
   AlertTriangle,
   CheckCircle2
 } from "lucide-react"
-
-interface Restaurant {
-  id: string
-  name: string
-  phone_number: string
-  logo_url: string | null
-  cover_image: string | null
-}
 
 interface EditRestaurantModalProps {
   open: boolean
@@ -53,7 +44,6 @@ export function EditRestaurantModal({
   restaurant,
   onSuccess 
 }: EditRestaurantModalProps) {
-  const { createSupabaseClient, isConfigValid, config } = useSupabaseConfig()
   const [formData, setFormData] = useState<RestaurantForm>({
     nombre: "",
     telefono: "",
@@ -75,7 +65,7 @@ export function EditRestaurantModal({
       setFormData({
         nombre: restaurant.name || "",
         telefono: restaurant.phone_number || "",
-        status: restaurant.is_active !== false ? "activo" : "inactivo",
+        status: (restaurant.is_active ?? true) ? "activo" : "inactivo",
         logo: null,
         fotoPortada: null
       })
@@ -107,7 +97,7 @@ export function EditRestaurantModal({
       setFormData({
         nombre: restaurant.name || "",
         telefono: restaurant.phone_number || "",
-        status: restaurant.is_active !== false ? "activo" : "inactivo",
+        status: (restaurant.is_active ?? true) ? "activo" : "inactivo",
         logo: null,
         fotoPortada: null
       })
@@ -117,10 +107,6 @@ export function EditRestaurantModal({
   }
 
   const handleSave = async () => {
-    if (!isConfigValid || !config.serviceKey) {
-      setError("Configuración de Supabase incompleta. Ve a Configuraciones → Integraciones.")
-      return
-    }
 
     if (!restaurant) {
       setError("No se encontró el restaurante a editar")
@@ -141,18 +127,8 @@ export function EditRestaurantModal({
     setError("")
 
     try {
-      const supabase = createClient(config.url, config.serviceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        },
-        global: {
-          headers: {
-            'apikey': config.serviceKey,
-            'Authorization': `Bearer ${config.serviceKey}`
-          }
-        }
-      })
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
       // Datos del restaurante a actualizar
       const restaurantData = {
@@ -163,70 +139,19 @@ export function EditRestaurantModal({
         cover_image: restaurant.cover_image
       }
 
-      // Subir archivos si existen (opcional - requiere bucket configurado)
-      try {
-        if (formData.logo) {
-          // Crear nombre único para evitar conflictos
-          const logoFileName = `logo_${restaurant.id}_${Date.now()}_${formData.logo.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-          console.log('Subiendo logo:', logoFileName)
-          
-          const { data: logoData, error: logoError } = await supabase.storage
-            .from('restaurants')
-            .upload(`logos/${logoFileName}`, formData.logo)
-
-          if (logoError) {
-            console.warn('Error subiendo logo (continuando con logo actual):', logoError)
-          } else {
-            const { data: { publicUrl: logoUrl } } = supabase.storage
-              .from('restaurants')
-              .getPublicUrl(`logos/${logoFileName}`)
-            
-            console.log('Logo subido exitosamente:', logoUrl)
-            restaurantData.logo_url = logoUrl
-          }
-        }
-
-        if (formData.fotoPortada) {
-          // Crear nombre único para evitar conflictos
-          const portadaFileName = `portada_${restaurant.id}_${Date.now()}_${formData.fotoPortada.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-          console.log('Subiendo foto de portada:', portadaFileName)
-          
-          const { data: portadaData, error: portadaError } = await supabase.storage
-            .from('restaurants')
-            .upload(`portadas/${portadaFileName}`, formData.fotoPortada)
-
-          if (portadaError) {
-            console.warn('Error subiendo foto de portada (continuando con foto actual):', portadaError)
-          } else {
-            const { data: { publicUrl: portadaUrl } } = supabase.storage
-              .from('restaurants')
-              .getPublicUrl(`portadas/${portadaFileName}`)
-            
-            console.log('Foto de portada subida exitosamente:', portadaUrl)
-            restaurantData.cover_image = portadaUrl
-          }
-        }
-      } catch (storageError: any) {
-        console.warn('Storage no configurado, continuando sin cambios de archivos:', storageError)
-        // Mostrar una advertencia más amigable si se intentaron subir archivos
-        if ((formData.logo || formData.fotoPortada) && storageError?.message?.includes('Bucket not found')) {
-          console.info('💡 Para subir archivos, crea un bucket llamado "restaurants" en Supabase Storage')
-        }
+      // Mock file uploads
+      if (formData.logo) {
+        console.log('Mock: Uploading logo:', formData.logo.name)
+        restaurantData.logo_url = 'mock-logo-url'
+      }
+      
+      if (formData.fotoPortada) {
+        console.log('Mock: Uploading cover image:', formData.fotoPortada.name)
+        restaurantData.cover_image = 'mock-cover-url'
       }
 
-      // Actualizar restaurante en la base de datos
-      console.log('Datos a actualizar en la base de datos:', restaurantData)
-      const { data, error: updateError } = await supabase
-        .from('restaurants')
-        .update(restaurantData)
-        .eq('id', restaurant.id)
-        .select()
-
-      console.log('Respuesta de actualización:', { data, error: updateError })
-
-      if (updateError) {
-        throw updateError
-      }
+      // Mock database update
+      console.log('Mock: Updating restaurant with data:', restaurantData)
 
       setSuccess(true)
       setTimeout(() => {
@@ -411,7 +336,7 @@ export function EditRestaurantModal({
           <Button
             type="button"
             onClick={handleSave}
-            disabled={isLoading || !isConfigValid || !config.serviceKey}
+            disabled={isLoading}
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

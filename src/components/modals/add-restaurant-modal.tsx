@@ -1,8 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useSupabaseConfig } from "@/hooks/use-supabase-config"
-import { createClient } from "@supabase/supabase-js"
 import {
   Dialog,
   DialogContent,
@@ -37,7 +35,6 @@ interface RestaurantForm {
 }
 
 export function AddRestaurantModal({ open, onOpenChange }: AddRestaurantModalProps) {
-  const { createSupabaseClient, isConfigValid, config } = useSupabaseConfig()
   const [formData, setFormData] = useState<RestaurantForm>({
     nombre: "",
     logo: null,
@@ -78,15 +75,7 @@ export function AddRestaurantModal({ open, onOpenChange }: AddRestaurantModalPro
   }
 
   const handleSave = async () => {
-    if (!isConfigValid) {
-      setError("Configuración de Supabase incompleta. Ve a Configuraciones → Integraciones.")
-      return
-    }
 
-    if (!config.serviceKey) {
-      setError("Se requiere la clave de servicio (service key) para crear restaurantes. Configúrala en Integraciones.")
-      return
-    }
 
     if (!formData.nombre.trim()) {
       setError("El nombre del restaurante es requerido")
@@ -102,28 +91,8 @@ export function AddRestaurantModal({ open, onOpenChange }: AddRestaurantModalPro
     setError("")
 
     try {
-      console.log('Configuración Supabase:', {
-        url: config.url,
-        hasAnonKey: !!config.anonKey,
-        hasServiceKey: !!config.serviceKey,
-        serviceKeyPrefix: config.serviceKey ? config.serviceKey.substring(0, 20) + '...' : 'No configurada'
-      })
-
-      // Usar service key si está disponible para operaciones administrativas
-      const supabase = config.serviceKey 
-        ? createClient(config.url, config.serviceKey, {
-            auth: {
-              autoRefreshToken: false,
-              persistSession: false
-            },
-            global: {
-              headers: {
-                'apikey': config.serviceKey,
-                'Authorization': `Bearer ${config.serviceKey}`
-              }
-            }
-          })
-        : createSupabaseClient()
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
       // Datos del restaurante
       const restaurantData = {
@@ -136,64 +105,19 @@ export function AddRestaurantModal({ open, onOpenChange }: AddRestaurantModalPro
 
       console.log('Datos a insertar:', restaurantData)
 
-      // Subir archivos si existen (opcional - requiere bucket configurado)
-      try {
-        if (formData.logo) {
-          const logoFileName = `logo_${Date.now()}_${formData.logo.name}`
-          const { data: logoData, error: logoError } = await supabase.storage
-            .from('restaurants')
-            .upload(`logos/${logoFileName}`, formData.logo)
-
-          if (logoError) {
-            console.warn('Error subiendo logo (continuando sin logo):', logoError)
-          } else {
-            const { data: { publicUrl: logoUrl } } = supabase.storage
-              .from('restaurants')
-              .getPublicUrl(`logos/${logoFileName}`)
-            
-            restaurantData.logo_url = logoUrl
-          }
-        }
-
-        if (formData.fotoPortada) {
-          const portadaFileName = `portada_${Date.now()}_${formData.fotoPortada.name}`
-          const { data: portadaData, error: portadaError } = await supabase.storage
-            .from('restaurants')
-            .upload(`portadas/${portadaFileName}`, formData.fotoPortada)
-
-          if (portadaError) {
-            console.warn('Error subiendo foto de portada (continuando sin foto):', portadaError)
-          } else {
-            const { data: { publicUrl: portadaUrl } } = supabase.storage
-              .from('restaurants')
-              .getPublicUrl(`portadas/${portadaFileName}`)
-            
-            restaurantData.cover_image = portadaUrl
-          }
-        }
-      } catch (storageError: any) {
-        console.warn('Storage no configurado, continuando sin archivos:', storageError)
-        // Mostrar una advertencia más amigable si se intentaron subir archivos
-        if ((formData.logo || formData.fotoPortada) && storageError?.message?.includes('Bucket not found')) {
-          console.info('💡 Para subir archivos, crea un bucket llamado "restaurants" en Supabase Storage')
-        }
+      // Mock file uploads
+      if (formData.logo) {
+        console.log('Mock: Uploading logo:', formData.logo.name)
+        restaurantData.logo_url = 'mock-logo-url'
+      }
+      
+      if (formData.fotoPortada) {
+        console.log('Mock: Uploading cover image:', formData.fotoPortada.name)
+        restaurantData.cover_image = 'mock-cover-url'
       }
 
-      // Insertar restaurante en la base de datos
-      console.log('Intentando insertar en Supabase...')
-      const { data, error: insertError } = await supabase
-        .from('restaurants')
-        .insert([restaurantData])
-
-      console.log('Respuesta de Supabase:')
-      console.log('Data:', data)
-      console.log('Error:', insertError)
-      console.log('Error completo:', JSON.stringify(insertError, null, 2))
-
-      if (insertError) {
-        console.error('Error de inserción:', JSON.stringify(insertError, null, 2))
-        throw insertError
-      }
+      // Mock database insertion
+      console.log('Mock: Creating restaurant with data:', restaurantData)
 
       setSuccess(true)
       setTimeout(() => {
@@ -205,7 +129,7 @@ export function AddRestaurantModal({ open, onOpenChange }: AddRestaurantModalPro
       console.error('Error creating restaurant:', error)
       console.log('Error details:', JSON.stringify(error, null, 2))
       
-      // Mejor manejo de errores de Supabase
+      // Better error handling
       let errorMessage = 'Error desconocido al crear el restaurante'
       
       if (error?.message) {
@@ -352,7 +276,7 @@ export function AddRestaurantModal({ open, onOpenChange }: AddRestaurantModalPro
           <Button
             type="button"
             onClick={handleSave}
-            disabled={isLoading || !isConfigValid || !config.serviceKey}
+            disabled={isLoading}
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

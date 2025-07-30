@@ -90,7 +90,7 @@ const demoRestaurantes = [
 
 export default function RestaurantesPage() {
   const { isDemoMode } = useDemoMode()
-  const { restaurants: supabaseRestaurants, loading, error, refreshRestaurants, isConfigured } = useRestaurants()
+  const { restaurants: mockRestaurants, loading, error, refreshRestaurants, isConfigured } = useRestaurants()
   const router = useRouter()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -99,17 +99,15 @@ export default function RestaurantesPage() {
   const [deletingRestaurant, setDeletingRestaurant] = useState<any>(null)
   const [activeFilter, setActiveFilter] = useState("all")
   
-  // Usar datos de Supabase si está configurado y no está en modo demo
+  // Usar datos mock o demo
   const allRestaurantes = isDemoMode 
     ? demoRestaurantes 
-    : isConfigured 
-      ? supabaseRestaurants.map(restaurant => ({
-          id: restaurant.id,
-          name: restaurant.name,
-          productCount: 0, // Por ahora 0, después podemos contar productos
-          status: restaurant.is_active === false ? "Inactivo" : "Activo"
-        }))
-      : []
+    : mockRestaurants.map(restaurant => ({
+        id: restaurant.id,
+        name: restaurant.name,
+        productCount: 0, // Por ahora 0, después podemos contar productos
+        status: restaurant.is_active === false ? "Inactivo" : "Activo"
+      }))
 
   // Filtrar restaurantes basado en la tab activa
   const restaurantes = allRestaurantes.filter(restaurant => {
@@ -343,7 +341,7 @@ export default function RestaurantesPage() {
                             <DropdownMenuItem 
                               onClick={() => {
                                 if (isDemoMode) return
-                                const fullRestaurant = supabaseRestaurants.find(r => r.id === restaurante.id)
+                                const fullRestaurant = mockRestaurants.find(r => r.id === restaurante.id)
                                 if (fullRestaurant) {
                                   router.push(`/admin/restaurantes/${restaurante.id}`)
                                 }
@@ -355,7 +353,7 @@ export default function RestaurantesPage() {
                               className="text-red-600"
                               onClick={() => {
                                 if (isDemoMode) return
-                                const fullRestaurant = supabaseRestaurants.find(r => r.id === restaurante.id)
+                                const fullRestaurant = mockRestaurants.find(r => r.id === restaurante.id)
                                 if (fullRestaurant) {
                                   setDeletingRestaurant(fullRestaurant)
                                 }
@@ -382,7 +380,7 @@ export default function RestaurantesPage() {
                 {isDemoMode 
                   ? "No hay restaurantes que coincidan con los filtros" 
                   : !isConfigured
-                    ? "Configura Supabase para ver tus restaurantes"
+                    ? "Los restaurantes se muestran desde datos mock"
                     : activeFilter === "active"
                       ? "No hay restaurantes activos"
                       : activeFilter === "inactive"
@@ -392,7 +390,7 @@ export default function RestaurantesPage() {
               </p>
               {!isDemoMode && !isConfigured && (
                 <p className="text-xs text-muted-foreground max-w-sm">
-                  Ve a Configuraciones → Integraciones para configurar Supabase
+                  Los restaurantes se muestran desde datos mock para demostración
                 </p>
               )}
               {!isDemoMode && isConfigured && (
