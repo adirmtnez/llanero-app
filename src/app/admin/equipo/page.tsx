@@ -40,8 +40,8 @@ import {
   Users
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
-import { useDemoMode } from "@/contexts/demo-mode-context"
+import { useState, useEffect } from "react"
+import { TableSkeleton } from "@/components/ui/table-skeleton"
 
 const demoTeamMembers = [
   {
@@ -101,11 +101,19 @@ const demoTeamMembers = [
 ]
 
 export default function EquipoPage() {
-  const { isDemoMode } = useDemoMode()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [loading, setLoading] = useState(true)
   
-  const teamMembers = isDemoMode ? demoTeamMembers : []
+  // Simulate loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false)
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [])
+  
+  const teamMembers = demoTeamMembers
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -242,7 +250,9 @@ export default function EquipoPage() {
         </div>
 
         {/* Team Members table */}
-        {teamMembers.length > 0 ? (
+        {loading ? (
+          <TableSkeleton rows={5} columns={5} showCheckbox={true} showActions={true} />
+        ) : teamMembers.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -327,22 +337,9 @@ export default function EquipoPage() {
             </div>
             <div className="text-center space-y-3">
               <p className="text-sm font-medium text-muted-foreground">
-                {isDemoMode ? "No hay miembros del equipo que coincidan con los filtros" : "No tienes miembros en el equipo aún"}
+                No hay miembros del equipo que coincidan con los filtros
               </p>
-              {!isDemoMode && (
-                <p className="text-xs text-muted-foreground max-w-sm">
-                  Agrega miembros a tu equipo para gestionar bodegones y restaurantes
-                </p>
-              )}
             </div>
-            {!isDemoMode && (
-              <div className="pt-2">
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar miembro
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </div>

@@ -1,6 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { useMediaQuery } from "@/hooks/use-media-query"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import { uploadFileToStorage } from "@/lib/storage"
 import {
   Dialog,
   DialogContent,
@@ -9,10 +12,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { toast } from "sonner"
 import { 
   UtensilsCrossed, 
   Upload, 
@@ -25,6 +38,7 @@ import {
 interface AddRestaurantModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
 interface RestaurantForm {
@@ -34,7 +48,8 @@ interface RestaurantForm {
   telefono: string
 }
 
-export function AddRestaurantModal({ open, onOpenChange }: AddRestaurantModalProps) {
+export function AddRestaurantModal({ open, onOpenChange, onSuccess }: AddRestaurantModalProps) {
+  const isDesktop = useMediaQuery("(min-width: 768px)")
   const [formData, setFormData] = useState<RestaurantForm>({
     nombre: "",
     logo: null,
@@ -75,8 +90,6 @@ export function AddRestaurantModal({ open, onOpenChange }: AddRestaurantModalPro
   }
 
   const handleSave = async () => {
-
-
     if (!formData.nombre.trim()) {
       setError("El nombre del restaurante es requerido")
       return
@@ -91,45 +104,107 @@ export function AddRestaurantModal({ open, onOpenChange }: AddRestaurantModalPro
     setError("")
 
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Datos del restaurante
-      const restaurantData = {
-        name: formData.nombre.trim(),
-        phone_number: formData.telefono.trim(),
-        is_active: true, // Los nuevos restaurantes están activos por defecto
-        logo_url: null as string | null,
-        cover_image: null as string | null
-      }
-
-      console.log('Datos a insertar:', restaurantData)
-
-      // Mock file uploads
-      if (formData.logo) {
-        console.log('Mock: Uploading logo:', formData.logo.name)
-        restaurantData.logo_url = 'mock-logo-url'
-      }
+      const configured = isSupabaseConfigured()
       
-      if (formData.fotoPortada) {
-        console.log('Mock: Uploading cover image:', formData.fotoPortada.name)
-        restaurantData.cover_image = 'mock-cover-url'
+      if (!configured || !supabase) {
+        // Mock mode
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        console.log('Mock: Creating restaurant with data:', {
+          name: formData.nombre.trim(),
+          phone_number: formData.telefono.trim(),
+          is_active: true,
+          logo_url: formData.logo ? 'mock-logo-url' : null,
+          cover_image: formData.fotoPortada ? 'mock-cover-url' : null
+        })
+      } else {
+        // Supabase mode
+        let logoUrl: string | null = null
+        let coverImageUrl: string | null = null
+
+        // First create the restaurant without images
+        const { data, error: supabaseError } = await supabase
+          .from('restaurants')
+          .insert({
+            name: formData.nombre.trim(),
+            phone_number: formData.telefono.trim(),
+            is_active: true,
+            logo_url: null,
+            cover_image: null,
+            delivery_available: true,
+            pickup_available: true,
+            opening_hours: null
+          })
+          .select()
+          .single()
+
+        if (supabaseError) {
+          throw new Error(supabaseError.message)
+        }
+
+        // Upload logo if provided
+        if (formData.logo && data) {
+          const logoUploadResult = await uploadFileToStorage(
+            formData.logo, 
+            'restaurants/logos', 
+            `restaurant-${data.id}-logo.${formData.logo.name.split('.').pop()}`
+          )
+
+          if (logoUploadResult.error) {
+            console.warn('Logo upload failed:', logoUploadResult.error)
+          } else {
+            logoUrl = logoUploadResult.url
+          }
+        }
+
+        // Upload cover image if provided
+        if (formData.fotoPortada && data) {
+          const coverUploadResult = await uploadFileToStorage(
+            formData.fotoPortada, 
+            'restaurants/covers', 
+            `restaurant-${data.id}-cover.${formData.fotoPortada.name.split('.').pop()}`
+          )
+
+          if (coverUploadResult.error) {
+            console.warn('Cover image upload failed:', coverUploadResult.error)
+          } else {
+            coverImageUrl = coverUploadResult.url
+          }
+        }
+
+        // Update restaurant with image URLs if any were uploaded
+        if (logoUrl || coverImageUrl) {
+          const updateData: any = {}
+          if (logoUrl) updateData.logo_url = logoUrl
+          if (coverImageUrl) updateData.cover_image = coverImageUrl
+
+          const { error: updateError } = await supabase
+            .from('restaurants')
+            .update(updateData)
+            .eq('id', data.id)
+
+          if (updateError) {
+            console.warn('Failed to update image URLs:', updateError.message)
+          }
+        }
+
+        console.log('Restaurant created:', data, 'Logo URL:', logoUrl, 'Cover URL:', coverImageUrl)
       }
 
-      // Mock database insertion
-      console.log('Mock: Creating restaurant with data:', restaurantData)
+      // Show success toast
+      toast.success("¡Restaurante creado exitosamente!", {
+        description: `${formData.nombre} ha sido agregado a tu lista de restaurantes.`
+      })
 
-      setSuccess(true)
-      setTimeout(() => {
-        resetForm()
-        onOpenChange(false)
-      }, 1500)
+      // Call success callback
+      onSuccess?.()
+      
+      // Reset and close
+      resetForm()
+      onOpenChange(false)
 
     } catch (error: any) {
       console.error('Error creating restaurant:', error)
-      console.log('Error details:', JSON.stringify(error, null, 2))
       
-      // Better error handling
       let errorMessage = 'Error desconocido al crear el restaurante'
       
       if (error?.message) {
@@ -141,6 +216,9 @@ export function AddRestaurantModal({ open, onOpenChange }: AddRestaurantModalPro
       }
       
       setError(errorMessage)
+      toast.error("Error al crear restaurante", {
+        description: errorMessage
+      })
     } finally {
       setIsLoading(false)
     }
@@ -151,128 +229,167 @@ export function AddRestaurantModal({ open, onOpenChange }: AddRestaurantModalPro
     onOpenChange(false)
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UtensilsCrossed className="h-5 w-5" />
-            Agregar Restaurante
-          </DialogTitle>
-          <DialogDescription>
-            Completa la información del nuevo restaurante
-          </DialogDescription>
-        </DialogHeader>
+  const renderFormContent = () => (
+    <div className="space-y-4 py-4">
+      <div className="space-y-2">
+        <Label htmlFor="nombre">Nombre *</Label>
+        <Input
+          id="nombre"
+          placeholder="Ej: Pizza Express"
+          value={formData.nombre}
+          onChange={(e) => handleInputChange('nombre', e.target.value)}
+          disabled={isLoading}
+        />
+      </div>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="nombre">Nombre *</Label>
-            <Input
-              id="nombre"
-              placeholder="Ej: Pizza Express"
-              value={formData.nombre}
-              onChange={(e) => handleInputChange('nombre', e.target.value)}
+      <div className="space-y-2">
+        <Label htmlFor="telefono">Teléfono *</Label>
+        <Input
+          id="telefono"
+          placeholder="Ej: +1234567890"
+          value={formData.telefono}
+          onChange={(e) => handleInputChange('telefono', e.target.value)}
+          disabled={isLoading}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="logo">Logo</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            id="logo"
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileChange('logo', e.target.files?.[0] || null)}
+            disabled={isLoading}
+            className="flex-1"
+          />
+          {formData.logo && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleFileChange('logo', null)}
               disabled={isLoading}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="telefono">Teléfono *</Label>
-            <Input
-              id="telefono"
-              placeholder="Ej: +1234567890"
-              value={formData.telefono}
-              onChange={(e) => handleInputChange('telefono', e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="logo">Logo</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="logo"
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileChange('logo', e.target.files?.[0] || null)}
-                disabled={isLoading}
-                className="flex-1"
-              />
-              {formData.logo && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleFileChange('logo', null)}
-                  disabled={isLoading}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            {formData.logo && (
-              <p className="text-xs text-muted-foreground">
-                Archivo seleccionado: {formData.logo.name}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="foto-portada">Foto de Portada</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="foto-portada"
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileChange('fotoPortada', e.target.files?.[0] || null)}
-                disabled={isLoading}
-                className="flex-1"
-              />
-              {formData.fotoPortada && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleFileChange('fotoPortada', null)}
-                  disabled={isLoading}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            {formData.fotoPortada && (
-              <p className="text-xs text-muted-foreground">
-                Archivo seleccionado: {formData.fotoPortada.name}
-              </p>
-            )}
-          </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {success && (
-            <Alert>
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription>
-                ¡Restaurante creado exitosamente!
-              </AlertDescription>
-            </Alert>
+            >
+              <X className="h-4 w-4" />
+            </Button>
           )}
         </div>
+        {formData.logo && (
+          <p className="text-xs text-muted-foreground">
+            Archivo seleccionado: {formData.logo.name}
+          </p>
+        )}
+      </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
+      <div className="space-y-2">
+        <Label htmlFor="foto-portada">Foto de Portada</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            id="foto-portada"
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileChange('fotoPortada', e.target.files?.[0] || null)}
             disabled={isLoading}
-          >
-            Cancelar
-          </Button>
+            className="flex-1"
+          />
+          {formData.fotoPortada && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleFileChange('fotoPortada', null)}
+              disabled={isLoading}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        {formData.fotoPortada && (
+          <p className="text-xs text-muted-foreground">
+            Archivo seleccionado: {formData.fotoPortada.name}
+          </p>
+        )}
+      </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {success && (
+        <Alert>
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertDescription>
+            ¡Restaurante creado exitosamente!
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
+  )
+
+  if (isDesktop) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UtensilsCrossed className="h-5 w-5" />
+              Agregar Restaurante
+            </DialogTitle>
+            <DialogDescription>
+              Completa la información del nuevo restaurante
+            </DialogDescription>
+          </DialogHeader>
+
+          {renderFormContent()}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isLoading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
+              Guardar Restaurante
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <DrawerHeader className="text-left">
+          <DrawerTitle className="flex items-center gap-2">
+            <UtensilsCrossed className="h-5 w-5" />
+            Agregar Restaurante
+          </DrawerTitle>
+          <DrawerDescription>
+            Completa la información del nuevo restaurante
+          </DrawerDescription>
+        </DrawerHeader>
+        
+        <div className="px-4 pb-4">
+          {renderFormContent()}
+        </div>
+        
+        <DrawerFooter>
           <Button
             type="button"
             onClick={handleSave}
@@ -283,8 +400,17 @@ export function AddRestaurantModal({ open, onOpenChange }: AddRestaurantModalPro
             ) : null}
             Guardar Restaurante
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DrawerClose asChild>
+            <Button 
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isLoading}
+            >
+              Cancelar
+            </Button>
+          </DrawerClose>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }

@@ -40,8 +40,8 @@ import {
   Package
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
-import { useDemoMode } from "@/contexts/demo-mode-context"
+import { useState, useEffect } from "react"
+import { TableSkeleton } from "@/components/ui/table-skeleton"
 
 const demoCategories = [
   {
@@ -68,11 +68,19 @@ const demoCategories = [
 ]
 
 export default function CategoriasPage() {
-  const { isDemoMode } = useDemoMode()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [loading, setLoading] = useState(true)
   
-  const categories = isDemoMode ? demoCategories : []
+  const categories = demoCategories
+
+  // Simulate loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false)
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
     <>
@@ -201,8 +209,18 @@ export default function CategoriasPage() {
           </div>
         </div>
 
+        {/* Loading state */}
+        {loading && (
+          <TableSkeleton 
+            rows={5} 
+            columns={3} 
+            showCheckbox={true} 
+            showActions={true}
+          />
+        )}
+
         {/* Categories table */}
-        {categories.length > 0 ? (
+        {!loading && categories.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -275,22 +293,9 @@ export default function CategoriasPage() {
             </div>
             <div className="text-center space-y-3">
               <p className="text-sm font-medium text-muted-foreground">
-                {isDemoMode ? "No hay categorías que coincidan con los filtros" : "No tienes categorías aún"}
+                No hay categorías que coincidan con los filtros
               </p>
-              {!isDemoMode && (
-                <p className="text-xs text-muted-foreground max-w-sm">
-                  Organiza tus productos creando categorías para facilitar la navegación
-                </p>
-              )}
             </div>
-            {!isDemoMode && (
-              <div className="pt-2">
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar categoría
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </div>

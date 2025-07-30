@@ -26,7 +26,6 @@ import { Upload, X, ArrowLeft } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { useDemoMode } from "@/contexts/demo-mode-context"
 import { useRestaurants } from "@/hooks/use-restaurants"
 import { useBodegones } from "@/hooks/use-bodegones"
 
@@ -72,7 +71,6 @@ const demoProducts = [
 export default function EditarProductoPage() {
   const router = useRouter()
   const params = useParams()
-  const { isDemoMode } = useDemoMode()
   const { restaurants, loading: restaurantsLoading } = useRestaurants()
   const { bodegones, loading: bodegonesLoading } = useBodegones()
   const productId = params.id as string
@@ -132,7 +130,7 @@ export default function EditarProductoPage() {
 
   useEffect(() => {
     // Load product data based on ID
-    if (isDemoMode && productId) {
+    if (productId) {
       const product = demoProducts.find(p => p.id === productId)
       if (product) {
         setName(product.name)
@@ -151,7 +149,7 @@ export default function EditarProductoPage() {
         setProductType("bodegon-product")
       }
     }
-  }, [isDemoMode, productId])
+  }, [productId])
 
   // Calculate Costo por item, Ganancia and Margen automatically
   useEffect(() => {

@@ -42,12 +42,12 @@ import {
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
-import { useDemoMode } from "@/contexts/demo-mode-context"
 import { AddRestaurantModal } from "@/components/modals/add-restaurant-modal"
 import { EditRestaurantModal } from "@/components/modals/edit-restaurant-modal"
 import { DeleteRestaurantModal } from "@/components/modals/delete-restaurant-modal"
 import { useRestaurants } from "@/hooks/use-restaurants"
 import { useRouter } from "next/navigation"
+import { TableSkeleton } from "@/components/ui/table-skeleton"
 
 const demoRestaurantes = [
   {
@@ -89,7 +89,6 @@ const demoRestaurantes = [
 ]
 
 export default function RestaurantesPage() {
-  const { isDemoMode } = useDemoMode()
   const { restaurants: mockRestaurants, loading, error, refreshRestaurants, isConfigured } = useRestaurants()
   const router = useRouter()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
@@ -99,15 +98,13 @@ export default function RestaurantesPage() {
   const [deletingRestaurant, setDeletingRestaurant] = useState<any>(null)
   const [activeFilter, setActiveFilter] = useState("all")
   
-  // Usar datos mock o demo
-  const allRestaurantes = isDemoMode 
-    ? demoRestaurantes 
-    : mockRestaurants.map(restaurant => ({
-        id: restaurant.id,
-        name: restaurant.name,
-        productCount: 0, // Por ahora 0, después podemos contar productos
-        status: restaurant.is_active === false ? "Inactivo" : "Activo"
-      }))
+  // Usar datos mock
+  const allRestaurantes = mockRestaurants.map(restaurant => ({
+    id: restaurant.id,
+    name: restaurant.name,
+    productCount: 0, // Por ahora 0, después podemos contar productos
+    status: restaurant.is_active === false ? "Inactivo" : "Activo"
+  }))
 
   // Filtrar restaurantes basado en la tab activa
   const restaurantes = allRestaurantes.filter(restaurant => {
@@ -256,7 +253,7 @@ export default function RestaurantesPage() {
         </div>
 
         {/* Error message */}
-        {!isDemoMode && error && (
+        {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0" />
@@ -277,13 +274,13 @@ export default function RestaurantesPage() {
         )}
 
         {/* Loading state */}
-        {!isDemoMode && loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
-              <p className="text-sm text-muted-foreground">Cargando restaurantes...</p>
-            </div>
-          </div>
+        {loading && (
+          <TableSkeleton 
+            rows={5} 
+            columns={3} 
+            showCheckbox={true} 
+            showActions={true}
+          />
         )}
 
         {/* Restaurantes table */}
@@ -340,7 +337,6 @@ export default function RestaurantesPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem 
                               onClick={() => {
-                                if (isDemoMode) return
                                 const fullRestaurant = mockRestaurants.find(r => r.id === restaurante.id)
                                 if (fullRestaurant) {
                                   router.push(`/admin/restaurantes/${restaurante.id}`)
@@ -352,7 +348,6 @@ export default function RestaurantesPage() {
                             <DropdownMenuItem 
                               className="text-red-600"
                               onClick={() => {
-                                if (isDemoMode) return
                                 const fullRestaurant = mockRestaurants.find(r => r.id === restaurante.id)
                                 if (fullRestaurant) {
                                   setDeletingRestaurant(fullRestaurant)
@@ -377,29 +372,27 @@ export default function RestaurantesPage() {
             </div>
             <div className="text-center space-y-3">
               <p className="text-sm font-medium text-muted-foreground">
-                {isDemoMode 
-                  ? "No hay restaurantes que coincidan con los filtros" 
-                  : !isConfigured
-                    ? "Los restaurantes se muestran desde datos mock"
-                    : activeFilter === "active"
-                      ? "No hay restaurantes activos"
-                      : activeFilter === "inactive"
-                        ? "No hay restaurantes inactivos"
-                        : "No tienes restaurantes aún"
+                {!isConfigured
+                  ? "Los restaurantes se muestran desde datos mock"
+                  : activeFilter === "active"
+                    ? "No hay restaurantes activos"
+                    : activeFilter === "inactive"
+                      ? "No hay restaurantes inactivos"
+                      : "No tienes restaurantes aún"
                 }
               </p>
-              {!isDemoMode && !isConfigured && (
+              {!isConfigured && (
                 <p className="text-xs text-muted-foreground max-w-sm">
                   Los restaurantes se muestran desde datos mock para demostración
                 </p>
               )}
-              {!isDemoMode && isConfigured && (
+              {isConfigured && (
                 <p className="text-xs text-muted-foreground max-w-sm">
                   Agrega restaurantes para ampliar tu oferta gastronómica y atraer más clientes
                 </p>
               )}
             </div>
-            {!isDemoMode && isConfigured && (
+            {isConfigured && (
               <div className="pt-2">
                 <Button 
                   size="sm"
@@ -415,12 +408,9 @@ export default function RestaurantesPage() {
 
         <AddRestaurantModal 
           open={isAddModalOpen}
-          onOpenChange={(open) => {
-            setIsAddModalOpen(open)
-            // Refrescar lista cuando se cierre el modal y no esté en modo demo
-            if (!open && !isDemoMode && isConfigured) {
-              refreshRestaurants()
-            }
+          onOpenChange={setIsAddModalOpen}
+          onSuccess={() => {
+            refreshRestaurants()
           }}
         />
 

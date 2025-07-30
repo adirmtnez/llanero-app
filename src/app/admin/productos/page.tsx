@@ -41,11 +41,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useDemoMode } from "@/contexts/demo-mode-context"
 import { useBodegonProducts } from "@/hooks/use-bodegon-products"
 import { useCategories } from "@/hooks/use-categories"
 import { DeleteProductModal } from "@/components/modals/delete-product-modal"
 import { BodegonProduct } from "@/types/products"
+import { TableSkeleton } from "@/components/ui/table-skeleton"
 
 const demoProducts = [
   {
@@ -87,7 +87,6 @@ const demoProducts = [
 ]
 
 export default function ProductosPage() {
-  const { isDemoMode } = useDemoMode()
   const router = useRouter()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -119,24 +118,22 @@ export default function ProductosPage() {
     raw: product // Mantener el objeto original para operaciones
   })
 
-  const products = isDemoMode ? demoProducts : realProducts.map(mapProductToTableFormat)
+  const products = realProducts.map(mapProductToTableFormat)
 
   // Cargar productos reales
   const loadProducts = async () => {
-    if (!isDemoMode) {
-      const result = await getProducts(
-        { search: searchQuery },
-        { page: currentPage, limit: 25 }
-      )
-      setRealProducts(result.products)
-      setTotalPages(result.pagination.totalPages)
-    }
+    const result = await getProducts(
+      { search: searchQuery },
+      { page: currentPage, limit: 25 }
+    )
+    setRealProducts(result.products)
+    setTotalPages(result.pagination.totalPages)
   }
 
-  // Cargar productos cuando cambie la página, búsqueda o se active el modo real
+  // Cargar productos cuando cambie la página o búsqueda
   useEffect(() => {
     loadProducts()
-  }, [currentPage, searchQuery, isDemoMode])
+  }, [currentPage, searchQuery])
 
   // Recargar al cambiar el término de búsqueda
   useEffect(() => {
@@ -158,16 +155,12 @@ export default function ProductosPage() {
   }
 
   const handleDeleteConfirm = async (productId: string) => {
-    if (!isDemoMode) {
-      const success = await deleteProduct(productId)
-      if (success) {
-        setShowDeleteModal(false)
-        setSelectedProduct(null)
-        // Recargar productos
-        loadProducts()
-      }
-    } else {
-      console.log("Deleting product:", productId)
+    const success = await deleteProduct(productId)
+    if (success) {
+      setShowDeleteModal(false)
+      setSelectedProduct(null)
+      // Recargar productos
+      loadProducts()
     }
   }
 
@@ -300,11 +293,7 @@ export default function ProductosPage() {
 
         {/* Products table */}
         {loading ? (
-          <div className="border rounded-lg bg-white p-8">
-            <div className="flex items-center justify-center">
-              <div className="text-sm text-muted-foreground">Cargando productos...</div>
-            </div>
-          </div>
+          <TableSkeleton rows={5} columns={6} showCheckbox={true} showActions={true} />
         ) : products.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
@@ -395,34 +384,25 @@ export default function ProductosPage() {
               </div>
               <div className="text-center space-y-3">
                 <p className="text-sm font-medium text-muted-foreground">
-                  {isDemoMode ? "No hay productos que coincidan con los filtros" : 
-                   searchQuery ? "No se encontraron productos" : 
-                   "No tienes productos aún"}
+                  {searchQuery ? "No se encontraron productos" : "No tienes productos aún"}
                 </p>
-                {!isDemoMode && !searchQuery && (
+                {!searchQuery && (
                   <p className="text-xs text-muted-foreground max-w-sm">
                     Los productos se muestran desde datos mock locales
                   </p>
                 )}
-                {false && (
-                  <p className="text-xs text-muted-foreground max-w-sm">
-                    Comienza agregando tu primer producto para gestionar tu inventario
-                  </p>
-                )}
-                {!isDemoMode && searchQuery && (
+                {searchQuery && (
                   <p className="text-xs text-muted-foreground max-w-sm">
                     Intenta con otros términos de búsqueda o agrega nuevos productos
                   </p>
                 )}
               </div>
-              {!isDemoMode && (
-                <div className="pt-2">
-                  <Button size="sm" onClick={() => router.push("/admin/productos/agregar")}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Agregar producto
-                  </Button>
-                </div>
-              )}
+              <div className="pt-2">
+                <Button size="sm" onClick={() => router.push("/admin/productos/agregar")}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Agregar producto
+                </Button>
+              </div>
             </div>
           </div>
         )}

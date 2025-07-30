@@ -42,12 +42,12 @@ import {
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
-import { useDemoMode } from "@/contexts/demo-mode-context"
 import { AddBodegonModal } from "@/components/modals/add-bodegon-modal"
 import { EditBodegonModal } from "@/components/modals/edit-bodegon-modal"
 import { DeleteBodegonModal } from "@/components/modals/delete-bodegon-modal"
 import { useBodegones } from "@/hooks/use-bodegones"
 import { useRouter } from "next/navigation"
+import { TableLoading } from "@/components/ui/table-loading"
 
 const demoBodegones = [
   {
@@ -83,7 +83,6 @@ const demoBodegones = [
 ]
 
 export default function BodegonesPage() {
-  const { isDemoMode } = useDemoMode()
   const { bodegones: mockBodegones, loading, error, refreshBodegones, isConfigured } = useBodegones()
   const router = useRouter()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
@@ -93,10 +92,8 @@ export default function BodegonesPage() {
   const [deletingBodegon, setDeletingBodegon] = useState<any>(null)
   const [activeFilter, setActiveFilter] = useState("all")
   
-  // Usar datos mock o demo
-  const allBodegones = isDemoMode 
-    ? demoBodegones 
-    : mockBodegones.map(bodegon => ({
+  // Usar datos mock
+  const allBodegones = mockBodegones.map(bodegon => ({
         id: bodegon.id,
         name: bodegon.name,
         productCount: 0, // Por ahora 0, después podemos contar productos
@@ -250,7 +247,7 @@ export default function BodegonesPage() {
         </div>
 
         {/* Error message */}
-        {!isDemoMode && error && (
+        {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-red-500 rounded-full flex-shrink-0" />
@@ -271,13 +268,8 @@ export default function BodegonesPage() {
         )}
 
         {/* Loading state */}
-        {!isDemoMode && loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
-              <p className="text-sm text-muted-foreground">Cargando bodegones...</p>
-            </div>
-          </div>
+        {loading && (
+          <TableLoading rows={5} columns={3} showCheckbox={true} showActions={true} />
         )}
 
         {/* Bodegones table */}
@@ -334,7 +326,6 @@ export default function BodegonesPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem 
                               onClick={() => {
-                                if (isDemoMode) return
                                 const fullBodegon = mockBodegones.find(b => b.id === bodegon.id)
                                 if (fullBodegon) {
                                   router.push(`/admin/bodegones/${bodegon.id}`)
@@ -346,7 +337,6 @@ export default function BodegonesPage() {
                             <DropdownMenuItem 
                               className="text-red-600"
                               onClick={() => {
-                                if (isDemoMode) return
                                 const fullBodegon = mockBodegones.find(b => b.id === bodegon.id)
                                 if (fullBodegon) {
                                   setDeletingBodegon(fullBodegon)
@@ -371,9 +361,7 @@ export default function BodegonesPage() {
             </div>
             <div className="text-center space-y-3">
               <p className="text-sm font-medium text-muted-foreground">
-                {isDemoMode 
-                  ? "No hay bodegones que coincidan con los filtros" 
-                  : !isConfigured
+                {!isConfigured
                     ? "Los bodegones se muestran desde datos mock"
                     : activeFilter === "active"
                       ? "No hay bodegones activos"
@@ -382,18 +370,18 @@ export default function BodegonesPage() {
                         : "No tienes bodegones aún"
                 }
               </p>
-              {!isDemoMode && !isConfigured && (
+              {!isConfigured && (
                 <p className="text-xs text-muted-foreground max-w-sm">
                   Los bodegones se muestran desde datos mock para demostración
                 </p>
               )}
-              {!isDemoMode && isConfigured && (
+              {isConfigured && (
                 <p className="text-xs text-muted-foreground max-w-sm">
                   Agrega bodegones para expandir tu red de distribución y llegar a más clientes
                 </p>
               )}
             </div>
-            {!isDemoMode && isConfigured && (
+            {isConfigured && (
               <div className="pt-2">
                 <Button 
                   size="sm"
@@ -409,12 +397,9 @@ export default function BodegonesPage() {
 
         <AddBodegonModal 
           open={isAddModalOpen}
-          onOpenChange={(open) => {
-            setIsAddModalOpen(open)
-            // Refrescar lista cuando se cierre el modal y no esté en modo demo
-            if (!open && !isDemoMode && isConfigured) {
-              refreshBodegones()
-            }
+          onOpenChange={setIsAddModalOpen}
+          onSuccess={() => {
+            refreshBodegones()
           }}
         />
 

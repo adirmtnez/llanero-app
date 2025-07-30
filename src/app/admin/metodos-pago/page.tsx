@@ -41,8 +41,8 @@ import {
   Building2
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
-import { useDemoMode } from "@/contexts/demo-mode-context"
+import { useState, useEffect } from "react"
+import { TableLoading } from "@/components/ui/table-loading"
 
 const demoPaymentMethods = [
   {
@@ -108,12 +108,20 @@ const demoPaymentMethods = [
 ]
 
 export default function MetodosPagoPage() {
-  const { isDemoMode } = useDemoMode()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeFilter, setActiveFilter] = useState("all")
+  const [loading, setLoading] = useState(true)
   
-  const allPaymentMethods = isDemoMode ? demoPaymentMethods : []
+  // Simulate loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false)
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [])
+  
+  const allPaymentMethods = demoPaymentMethods
   
   // Filter payment methods based on active filter
   const paymentMethods = allPaymentMethods.filter(method => {
@@ -262,8 +270,18 @@ export default function MetodosPagoPage() {
           </div>
         </div>
 
+        {/* Loading state */}
+        {loading && (
+          <TableLoading 
+            rows={5} 
+            columns={3} 
+            showCheckbox={true} 
+            showActions={true}
+          />
+        )}
+
         {/* Payment Methods table */}
-        {paymentMethods.length > 0 ? (
+        {!loading && paymentMethods.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -348,25 +366,9 @@ export default function MetodosPagoPage() {
             </div>
             <div className="text-center space-y-3">
               <p className="text-sm font-medium text-muted-foreground">
-                {isDemoMode 
-                  ? `No hay métodos de pago ${activeFilter === "nacional" ? "nacionales" : activeFilter === "internacional" ? "internacionales" : "que coincidan con los filtros"}`
-                  : "No tienes métodos de pago configurados aún"
-                }
+                {`No hay métodos de pago ${activeFilter === "nacional" ? "nacionales" : activeFilter === "internacional" ? "internacionales" : "que coincidan con los filtros"}`}
               </p>
-              {!isDemoMode && (
-                <p className="text-xs text-muted-foreground max-w-sm">
-                  Configura métodos de pago para que tus clientes puedan realizar transacciones
-                </p>
-              )}
             </div>
-            {!isDemoMode && (
-              <div className="pt-2">
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar método
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </div>

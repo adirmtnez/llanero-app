@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 export interface Restaurant {
   id: string
@@ -52,7 +53,7 @@ const mockRestaurants: Restaurant[] = [
 
 export function useRestaurants() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchRestaurants = useCallback(async () => {
@@ -60,12 +61,46 @@ export function useRestaurants() {
     setError(null)
 
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500))
-      setRestaurants(mockRestaurants)
+      // Check if Supabase is configured
+      const configured = isSupabaseConfigured()
+      
+      if (!configured || !supabase) {
+        // Use mock data if Supabase is not configured
+        await new Promise(resolve => setTimeout(resolve, 500))
+        setRestaurants(mockRestaurants)
+        return
+      }
+
+      // Fetch from Supabase
+      const { data, error: supabaseError } = await supabase
+        .from('restaurants')
+        .select('*')
+        .order('name', { ascending: true })
+
+      if (supabaseError) {
+        throw new Error(supabaseError.message)
+      }
+
+      // Map Supabase data to our interface
+      const mappedRestaurants: Restaurant[] = (data || []).map(item => ({
+        id: item.id.toString(),
+        name: item.name || '',
+        phone_number: item.phone_number || '',
+        logo_url: item.logo_url || null,
+        cover_image: item.cover_image || null,
+        delivery_available: item.delivery_available !== false,
+        pickup_available: item.pickup_available !== false,
+        opening_hours: item.opening_hours || null,
+        is_active: item.is_active !== false
+      }))
+
+      setRestaurants(mappedRestaurants)
     } catch (err: any) {
       console.error('Error fetching restaurants:', err)
       setError(err.message || 'Error al cargar restaurantes')
+      
+      // Fallback to mock data on error
+      setRestaurants(mockRestaurants)
     } finally {
       setLoading(false)
     }
@@ -85,6 +120,6 @@ export function useRestaurants() {
     loading,
     error,
     refreshRestaurants,
-    isConfigured: true // Always configured in mock mode
+    isConfigured: isSupabaseConfigured()
   }
 }

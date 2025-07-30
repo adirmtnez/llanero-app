@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
 import { 
   Smartphone, 
   ShoppingCart, 
@@ -15,13 +16,17 @@ import {
   CheckCircle2,
   Save,
   Database,
-  Puzzle
+  Settings
 } from "lucide-react"
+import { SupabaseConfigModal } from "@/components/modals/supabase-config-modal"
+import { isSupabaseConfigured } from "@/lib/supabase"
 
 export default function ConfiguracionesPage() {
   const [isCartEnabled, setIsCartEnabled] = useState(true)
   const [maintenanceMessage, setMaintenanceMessage] = useState("")
   const [hasChanges, setHasChanges] = useState(false)
+  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false)
+  const supabaseConfigured = isSupabaseConfigured()
 
   const handleCartToggle = (enabled: boolean) => {
     setIsCartEnabled(enabled)
@@ -212,129 +217,44 @@ export default function ConfiguracionesPage() {
           <Card>
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* QuickBooks */}
+                {/* Supabase */}
                 <div className="border rounded-lg overflow-hidden bg-white">
                   <div className="p-4">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">qb</span>
+                        <Database className="h-5 w-5 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-medium text-sm">QuickBooks</h3>
-                        <p className="text-xs text-gray-500">Sincroniza gastos para registros precisos.</p>
+                        <h3 className="font-medium text-sm">Supabase</h3>
+                        <p className="text-xs text-gray-500">Base de datos PostgreSQL con APIs en tiempo real.</p>
                       </div>
                     </div>
                   </div>
                   <div className="border-t px-4 py-3 flex items-center justify-between bg-gray-50">
-                    <Button variant="ghost" size="sm" className="text-xs text-blue-600 h-8 px-3">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-xs text-blue-600 h-8 px-3"
+                      onClick={() => setIsSupabaseModalOpen(true)}
+                    >
                       Configurar
                     </Button>
-                    <Switch />
-                  </div>
-                </div>
-
-                {/* PayPal */}
-                <div className="border rounded-lg overflow-hidden bg-white">
-                  <div className="p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold text-xs">PP</span>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm">PayPal</h3>
-                        <p className="text-xs text-gray-500">Pagos en línea y móviles confiables.</p>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className={`w-3 h-3 rounded-full ${
+                          supabaseConfigured 
+                            ? 'bg-green-500' 
+                            : 'bg-gray-400'
+                        }`}
+                      />
+                      <span className={`text-xs font-medium ${
+                        supabaseConfigured 
+                          ? 'text-green-600' 
+                          : 'text-gray-500'
+                      }`}>
+                        {supabaseConfigured ? 'Configurado' : 'No configurado'}
+                      </span>
                     </div>
-                  </div>
-                  <div className="border-t px-4 py-3 flex items-center justify-between bg-gray-50">
-                    <Button variant="ghost" size="sm" className="text-xs text-blue-600 h-8 px-3">
-                      Configurar
-                    </Button>
-                    <Switch />
-                  </div>
-                </div>
-
-                {/* Google Analytics */}
-                <div className="border rounded-lg overflow-hidden bg-white">
-                  <div className="p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold text-xs">GA</span>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm">Google Analytics</h3>
-                        <p className="text-xs text-gray-500">Análisis y estadísticas web avanzadas.</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="border-t px-4 py-3 flex items-center justify-between bg-gray-50">
-                    <Button variant="ghost" size="sm" className="text-xs text-blue-600 h-8 px-3">
-                      Configurar
-                    </Button>
-                    <Switch />
-                  </div>
-                </div>
-
-                {/* Wave */}
-                <div className="border rounded-lg overflow-hidden bg-white">
-                  <div className="p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-blue-800 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold text-xs">W</span>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm">Wave</h3>
-                        <p className="text-xs text-gray-500">Herramientas contables gratuitas para emprendedores.</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="border-t px-4 py-3 flex items-center justify-between bg-gray-50">
-                    <Button variant="ghost" size="sm" className="text-xs text-blue-600 h-8 px-3">
-                      Configurar
-                    </Button>
-                    <Switch />
-                  </div>
-                </div>
-
-                {/* Amazon Seller Central */}
-                <div className="border rounded-lg overflow-hidden bg-white">
-                  <div className="p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-orange-400 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold text-xs">AS</span>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm">Amazon Seller Central</h3>
-                        <p className="text-xs text-gray-500">Gestiona ventas e inventario de Amazon.</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="border-t px-4 py-3 flex items-center justify-between bg-gray-50">
-                    <Button variant="ghost" size="sm" className="text-xs text-blue-600 h-8 px-3">
-                      Configurar
-                    </Button>
-                    <Switch />
-                  </div>
-                </div>
-
-                {/* Google Data Studio */}
-                <div className="border rounded-lg overflow-hidden bg-white">
-                  <div className="p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold text-xs">GDS</span>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm">Google Data Studio</h3>
-                        <p className="text-xs text-gray-500">Visualización de datos gratuita.</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="border-t px-4 py-3 flex items-center justify-between bg-gray-50">
-                    <Button variant="ghost" size="sm" className="text-xs text-blue-600 h-8 px-3">
-                      Configurar
-                    </Button>
-                    <Switch defaultChecked />
                   </div>
                 </div>
               </div>
@@ -342,6 +262,11 @@ export default function ConfiguracionesPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <SupabaseConfigModal 
+        open={isSupabaseModalOpen}
+        onOpenChange={setIsSupabaseModalOpen}
+      />
     </div>
   )
 }

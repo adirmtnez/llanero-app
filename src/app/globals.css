@@ -119,6 +119,30 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Cursor pointer para elementos clickeables específicos */
+  button,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  a,
+  [role="tab"],
+  [role="menuitem"],
+  .cursor-pointer {
+    cursor: pointer;
+  }
+
+  /* Toast customization */
+  [data-sonner-toast] {
+    background: #000000 !important;
+    border: 1px solid #333333 !important;
+    color: #ffffff !important;
+  }
+
+  [data-sonner-toast] [data-description] {
+    color: #ffffff !important;
+  }
 }
 
 /* Estilos específicos para la aplicación de cliente */

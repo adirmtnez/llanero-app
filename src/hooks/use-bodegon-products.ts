@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { 
   BodegonProduct, 
   CreateBodegonProductData, 
@@ -48,7 +48,7 @@ const mockProducts: BodegonProduct[] = [
 ]
 
 export function useBodegonProducts() {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Utility function para formatear precios
@@ -332,6 +332,15 @@ export function useBodegonProducts() {
       setLoading(false)
     }
   }
+
+  // Auto-load initial data
+  useEffect(() => {
+    // Start with loading true, then load mock data after delay
+    const timer = setTimeout(() => {
+      setLoading(false)
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [])
 
   return {
     loading,

@@ -21,8 +21,7 @@ import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
-import { DemoModeToggle } from "@/components/demo-mode-toggle"
-import { Separator } from "@/components/ui/separator"
+import { useAuth } from "@/contexts/auth-context"
 import {
   Sidebar,
   SidebarContent,
@@ -33,6 +32,7 @@ import {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const { user } = useAuth()
 
   // Function to check if a nav item is active
   const isNavItemActive = (itemUrl: string, hasItems?: boolean) => {
@@ -53,8 +53,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Dynamic data based on current pathname
   const data = {
     user: {
-      name: "Admin User",
-      email: "admin@llanero-app.com",
+      name: user?.full_name || user?.email?.split('@')[0] || "Usuario",
+      email: user?.email || "usuario@llanero-app.com",
       avatar: "/avatars/admin.jpg",
     },
     navMain: [
@@ -141,8 +141,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavProjects projects={data.administration} title="Administración" />
       </SidebarContent>
       <SidebarFooter>
-        <DemoModeToggle />
-        <Separator className="my-2" />
         <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />

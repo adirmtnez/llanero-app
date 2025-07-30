@@ -40,8 +40,8 @@ import {
   Package
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
-import { useDemoMode } from "@/contexts/demo-mode-context"
+import { useState, useEffect } from "react"
+import { TableSkeleton } from "@/components/ui/table-skeleton"
 
 const demoSubCategories = [
   {
@@ -89,11 +89,19 @@ const demoSubCategories = [
 ]
 
 export default function SubCategoriasPage() {
-  const { isDemoMode } = useDemoMode()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [loading, setLoading] = useState(true)
   
-  const subCategories = isDemoMode ? demoSubCategories : []
+  // Simulate loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false)
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [])
+  
+  const subCategories = demoSubCategories
 
   return (
     <>
@@ -222,8 +230,18 @@ export default function SubCategoriasPage() {
           </div>
         </div>
 
+        {/* Loading state */}
+        {loading && (
+          <TableSkeleton 
+            rows={5} 
+            columns={4} 
+            showCheckbox={true} 
+            showActions={true}
+          />
+        )}
+
         {/* Sub Categories table */}
-        {subCategories.length > 0 ? (
+        {!loading && subCategories.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -302,22 +320,9 @@ export default function SubCategoriasPage() {
             </div>
             <div className="text-center space-y-3">
               <p className="text-sm font-medium text-muted-foreground">
-                {isDemoMode ? "No hay sub categorías que coincidan con los filtros" : "No tienes sub categorías aún"}
+                No hay sub categorías que coincidan con los filtros
               </p>
-              {!isDemoMode && (
-                <p className="text-xs text-muted-foreground max-w-sm">
-                  Organiza mejor tus productos creando sub categorías dentro de las categorías principales
-                </p>
-              )}
             </div>
-            {!isDemoMode && (
-              <div className="pt-2">
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar sub categoría
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </div>

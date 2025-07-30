@@ -35,9 +35,9 @@ import {
   Globe
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
-import { useDemoMode } from "@/contexts/demo-mode-context"
+import { useState, useEffect } from "react"
 import { OrderDetailModal } from "@/components/order-detail-modal"
+import { TableSkeleton } from "@/components/ui/table-skeleton"
 
 const demoOrders = [
   {
@@ -147,13 +147,21 @@ const demoOrders = [
 ]
 
 export default function PedidosPage() {
-  const { isDemoMode } = useDemoMode()
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
   
-  const orders = isDemoMode ? demoOrders : []
+  // Simulate loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false)
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [])
+  
+  const orders = demoOrders
 
   const handleOrderClick = (order: any, date: string) => {
     setSelectedOrder({
@@ -303,7 +311,9 @@ export default function PedidosPage() {
         </div>
 
         {/* Orders content */}
-        {orders.length > 0 ? (
+        {loading ? (
+          <TableSkeleton rows={5} columns={5} showCheckbox={true} showActions={true} />
+        ) : orders.length > 0 ? (
           <div className="space-y-6">
             {orders.map((dateGroup, dateIndex) => (
               <div key={dateIndex} className="space-y-3">
@@ -362,22 +372,9 @@ export default function PedidosPage() {
               </div>
               <div className="text-center space-y-3">
                 <p className="text-sm font-medium text-muted-foreground">
-                  {isDemoMode ? "No hay pedidos que coincidan con los filtros" : "No tienes pedidos aún"}
+                  No hay pedidos que coincidan con los filtros
                 </p>
-                {!isDemoMode && (
-                  <p className="text-xs text-muted-foreground max-w-sm">
-                    Cuando recibas tu primer pedido, aparecerá aquí con toda la información de pago
-                  </p>
-                )}
               </div>
-              {!isDemoMode && (
-                <div className="pt-2">
-                  <Button size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Crear pedido de prueba
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
         )}

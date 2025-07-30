@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 export interface Bodegon {
   id: string
@@ -48,7 +49,7 @@ const mockBodegones: Bodegon[] = [
 
 export function useBodegones() {
   const [bodegones, setBodegones] = useState<Bodegon[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchBodegones = useCallback(async () => {
@@ -56,12 +57,43 @@ export function useBodegones() {
     setError(null)
 
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500))
-      setBodegones(mockBodegones)
+      // Check if Supabase is configured
+      const configured = isSupabaseConfigured()
+      
+      if (!configured || !supabase) {
+        // Use mock data if Supabase is not configured
+        await new Promise(resolve => setTimeout(resolve, 500))
+        setBodegones(mockBodegones)
+        return
+      }
+
+      // Fetch from Supabase
+      const { data, error: supabaseError } = await supabase
+        .from('bodegons')
+        .select('*')
+        .order('name', { ascending: true })
+
+      if (supabaseError) {
+        throw new Error(supabaseError.message)
+      }
+
+      // Map Supabase data to our interface
+      const mappedBodegones: Bodegon[] = (data || []).map(item => ({
+        id: item.id.toString(),
+        name: item.name || '',
+        address: item.address || null,
+        phone_number: item.phone_number || '',
+        is_active: item.is_active !== false,
+        logo_url: item.logo_url || null
+      }))
+
+      setBodegones(mappedBodegones)
     } catch (err: any) {
       console.error('Error fetching bodegones:', err)
       setError(err.message || 'Error al cargar bodegones')
+      
+      // Fallback to mock data on error
+      setBodegones(mockBodegones)
     } finally {
       setLoading(false)
     }
@@ -81,6 +113,6 @@ export function useBodegones() {
     loading,
     error,
     refreshBodegones,
-    isConfigured: true // Always configured in mock mode
+    isConfigured: isSupabaseConfigured()
   }
 }
