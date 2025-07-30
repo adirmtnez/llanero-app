@@ -8,6 +8,7 @@ const mockCategories: Category[] = [
     id: "1",
     name: "Bebidas",
     description: "Refrescos, jugos y bebidas en general",
+    type: "bodegon",
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -16,6 +17,7 @@ const mockCategories: Category[] = [
     id: "2",
     name: "Snacks",
     description: "Papas, galletas y aperitivos",
+    type: "bodegon",
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -24,6 +26,7 @@ const mockCategories: Category[] = [
     id: "3",
     name: "Lácteos",
     description: "Leche, quesos y derivados",
+    type: "bodegon",
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -36,6 +39,7 @@ const mockSubcategories: Subcategory[] = [
     name: "Refrescos",
     description: "Coca-Cola, Pepsi, etc.",
     parent_category_id: "1",
+    type: "bodegon",
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -45,6 +49,7 @@ const mockSubcategories: Subcategory[] = [
     name: "Jugos Naturales",
     description: "Jugos de frutas naturales",
     parent_category_id: "1",
+    type: "bodegon",
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
