@@ -273,18 +273,15 @@ export default function RestaurantesPage() {
           </div>
         )}
 
-        {/* Loading state */}
-        {loading && (
+        {/* Restaurantes table */}
+        {loading ? (
           <TableSkeleton 
             rows={5} 
-            columns={3} 
+            columns={5} 
             showCheckbox={true} 
             showActions={true}
           />
-        )}
-
-        {/* Restaurantes table */}
-        {!loading && restaurantes.length > 0 ? (
+        ) : restaurantes.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -366,7 +363,8 @@ export default function RestaurantesPage() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center space-y-6 py-16">
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <div className="flex flex-col items-center justify-center space-y-6 py-16">
             <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
               <UtensilsCrossed className="h-6 w-6 text-muted-foreground/50" />
             </div>
@@ -403,6 +401,7 @@ export default function RestaurantesPage() {
                 </Button>
               </div>
             )}
+            </div>
           </div>
         )}
 

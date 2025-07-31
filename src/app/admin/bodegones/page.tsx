@@ -267,13 +267,10 @@ export default function BodegonesPage() {
           </div>
         )}
 
-        {/* Loading state */}
-        {loading && (
-          <TableLoading rows={5} columns={3} showCheckbox={true} showActions={true} />
-        )}
-
         {/* Bodegones table */}
-        {!loading && bodegones.length > 0 ? (
+        {loading ? (
+          <TableLoading rows={5} columns={4} showCheckbox={true} showActions={true} />
+        ) : bodegones.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -355,7 +352,8 @@ export default function BodegonesPage() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center space-y-6 py-16">
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <div className="flex flex-col items-center justify-center space-y-6 py-16">
             <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
               <Store className="h-6 w-6 text-muted-foreground/50" />
             </div>
@@ -392,6 +390,7 @@ export default function BodegonesPage() {
                 </Button>
               </div>
             )}
+            </div>
           </div>
         )}
 

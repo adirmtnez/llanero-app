@@ -34,29 +34,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [isConfigured] = useState(() => isSupabaseConfigured())
+  const [initialized, setInitialized] = useState(false)
 
-  console.log('AuthProvider render:', { user: user?.email, loading, isConfigured })
+  // Only log during development and reduce noise
+  if (process.env.NODE_ENV === 'development' && !initialized) {
+    console.log('AuthProvider initializing:', { user: user?.email, loading, isConfigured })
+  }
 
   useEffect(() => {
+    // Prevent re-initialization if already initialized
+    if (initialized) return
+
     let unsubscribe: (() => void) | undefined
 
     const initAuth = async () => {
       if (isConfigured) {
         // Supabase mode
         try {
-          console.log('AuthProvider: Initializing Supabase auth...')
+          if (process.env.NODE_ENV === 'development') {
+            console.log('AuthProvider: Initializing Supabase auth...')
+          }
           
           // Get current session first to avoid delays
           const currentUser = await getCurrentUser()
-          console.log('AuthProvider: Initial user check:', currentUser ? currentUser.email : 'no user')
+          if (process.env.NODE_ENV === 'development') {
+            console.log('AuthProvider: Initial user check:', currentUser ? currentUser.email : 'no user')
+          }
           
           // Set initial state
           setUser(currentUser)
           setLoading(false)
+          setInitialized(true)
           
           // Set up auth state listener for ongoing changes
           unsubscribe = onAuthStateChange((user) => {
-            console.log('Auth state changed:', user ? user.email : 'logged out')
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Auth state changed:', user ? user.email : 'logged out')
+            }
             setUser(user)
           })
           
@@ -64,10 +78,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Error initializing auth:', error)
           setUser(null)
           setLoading(false)
+          setInitialized(true)
         }
       } else {
         // Mock mode
-        console.log('AuthProvider: Using mock mode')
+        if (process.env.NODE_ENV === 'development') {
+          console.log('AuthProvider: Using mock mode')
+        }
         setTimeout(() => {
           const mockUser: AuthUser = {
             id: "mock-user-id",
@@ -76,7 +93,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           setUser(mockUser)
           setLoading(false)
-        }, 1000)
+          setInitialized(true)
+        }, 500) // Reduced from 1000ms to 500ms for faster mock auth
       }
     }
 
@@ -84,11 +102,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       if (unsubscribe) {
-        console.log('AuthProvider: Cleaning up auth state listener')
+        if (process.env.NODE_ENV === 'development') {
+          console.log('AuthProvider: Cleaning up auth state listener')
+        }
         unsubscribe()
       }
     }
-  }, [isConfigured])
+  }, [isConfigured, initialized])
 
   const signUp = async (email: string, password: string, name: string) => {
     if (isConfigured) {

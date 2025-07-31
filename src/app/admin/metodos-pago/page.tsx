@@ -270,18 +270,15 @@ export default function MetodosPagoPage() {
           </div>
         </div>
 
-        {/* Loading state */}
-        {loading && (
+        {/* Payment Methods table */}
+        {loading ? (
           <TableLoading 
             rows={5} 
-            columns={3} 
+            columns={4} 
             showCheckbox={true} 
             showActions={true}
           />
-        )}
-
-        {/* Payment Methods table */}
-        {!loading && paymentMethods.length > 0 ? (
+        ) : paymentMethods.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -360,7 +357,8 @@ export default function MetodosPagoPage() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center space-y-6 py-16">
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <div className="flex flex-col items-center justify-center space-y-6 py-16">
             <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
               <CreditCard className="h-6 w-6 text-muted-foreground/50" />
             </div>
@@ -368,6 +366,7 @@ export default function MetodosPagoPage() {
               <p className="text-sm font-medium text-muted-foreground">
                 {`No hay métodos de pago ${activeFilter === "nacional" ? "nacionales" : activeFilter === "internacional" ? "internacionales" : "que coincidan con los filtros"}`}
               </p>
+            </div>
             </div>
           </div>
         )}

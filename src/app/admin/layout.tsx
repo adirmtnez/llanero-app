@@ -6,7 +6,6 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { MobileTopbar } from "@/components/mobile-topbar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useAuth } from "@/contexts/auth-context"
-import { Loader2 } from "lucide-react"
 
 export default function AdminLayout({
   children,
@@ -16,50 +15,20 @@ export default function AdminLayout({
   const { user, loading } = useAuth()
   const router = useRouter()
 
-  console.log('AdminLayout render:', { user: user?.email, loading })
-
   useEffect(() => {
-    console.log('AdminLayout: Component mounted')
-    
-    // Add a safety timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      if (loading) {
-        console.log('AdminLayout: Loading timeout reached, forcing auth check')
-        router.push("/auth")
-      }
-    }, 10000) // 10 second timeout
-    
-    return () => {
-      console.log('AdminLayout: Component unmounted')
-      clearTimeout(timeout)
-    }
-  }, [loading, router])
-
-  useEffect(() => {
-    console.log('AdminLayout: Auth state effect:', { user: user?.email, loading })
+    // Only redirect if auth check is complete and no user found
+    // Supabase handles session persistence automatically
     if (!loading && !user) {
-      console.log('AdminLayout: Redirecting to auth - no user found')
       router.push("/auth")
     }
   }, [user, loading, router])
 
-  // Show loading state while checking authentication
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA]">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
-          <p className="text-gray-600">Verificando autenticación...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Don't render admin content if user is not authenticated
-  if (!user) {
+  // Don't render anything if redirecting to auth
+  if (!loading && !user) {
     return null
   }
 
+  // Render admin layout - trust Supabase session persistence
   return (
     <SidebarProvider>
       <AppSidebar />
