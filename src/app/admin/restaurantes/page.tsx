@@ -365,7 +365,7 @@ export default function RestaurantesPage() {
               </Table>
             </div>
           </div>
-        ) : (
+        ) : !loading ? (
           <div className="flex flex-col items-center justify-center space-y-6 py-16">
             <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
               <UtensilsCrossed className="h-6 w-6 text-muted-foreground/50" />
@@ -404,7 +404,7 @@ export default function RestaurantesPage() {
               </div>
             )}
           </div>
-        )}
+        ) : null}
 
         <AddRestaurantModal 
           open={isAddModalOpen}
