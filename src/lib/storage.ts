@@ -197,20 +197,58 @@ export function uploadProductImage(file: File, productId: string, imageIndex?: n
  * @param bucketName - Override the default bucket
  * @returns Promise<{url: string, error?: string}>
  */
-export function uploadToCustomBucket(
+export async function uploadToCustomBucket(
   file: File, 
   folder: string, 
   filename: string, 
   bucketName: string
-) {
-  // Temporarily override the bucket for this upload
-  const originalBucket = process.env.NEXT_PUBLIC_AWS_S3_BUCKET
-  process.env.NEXT_PUBLIC_AWS_S3_BUCKET = bucketName
-  
-  const result = uploadFileToStorage(file, folder, filename)
-  
-  // Restore original bucket
-  process.env.NEXT_PUBLIC_AWS_S3_BUCKET = originalBucket
-  
-  return result
+): Promise<{ url: string | null; error?: string }> {
+  console.log('🔧 Starting custom bucket S3 file upload:', { 
+    fileName: file.name, 
+    fileSize: file.size, 
+    folder, 
+    customFilename: filename,
+    bucketName 
+  })
+
+  try {
+    // Create S3 client
+    const s3Client = createS3Client()
+
+    // Generate filename if not provided
+    const fileExt = file.name.split('.').pop()?.toLowerCase()
+    const fileName = filename ? `${filename}.${fileExt}` : `file-${generateUniqueId()}.${fileExt}`
+    const key = `${folder}/${fileName}`
+
+    console.log('📁 S3 Upload key:', key)
+
+    // Convert File to ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = new Uint8Array(arrayBuffer)
+
+    // Prepare upload command with custom bucket
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type,
+      CacheControl: 'max-age=3600',
+    })
+
+    // Upload to S3
+    const result = await s3Client.send(command)
+    console.log('✅ S3 upload successful:', result)
+
+    // Generate public URL
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const projectId = supabaseUrl.split('//')[1].split('.')[0]
+    const publicUrl = `https://${projectId}.supabase.co/storage/v1/object/public/${bucketName}/${key}`
+    
+    console.log('🔗 Public URL generated:', publicUrl)
+    return { url: publicUrl }
+
+  } catch (error: any) {
+    console.error('💥 S3 upload error:', error)
+    return { url: null, error: `Error S3: ${error.message}` }
+  }
 }
