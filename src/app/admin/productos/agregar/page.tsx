@@ -42,7 +42,7 @@ export default function AgregarProductoPage() {
   const router = useRouter()
   const { restaurants, loading: restaurantsLoading } = useRestaurants()
   const { bodegones, loading: bodegonesLoading } = useBodegones()
-  const { createProduct, loading: creatingProduct, error: productError } = useBodegonProducts()
+  const { createProductWithInventory, loading: creatingProduct, error: productError } = useBodegonProducts()
   const { uploadMultipleImages, uploading: uploadingImages } = useProductImages()
   
   // Categories and subcategories hooks
@@ -63,22 +63,16 @@ export default function AgregarProductoPage() {
   const [sku, setSku] = useState("")
   const [barcode, setBarcode] = useState("")
   const [price, setPrice] = useState("")
-  const [comparePrice, setComparePrice] = useState("")
-  const [quantity, setQuantity] = useState("1")
-  const [costPerItem, setCostPerItem] = useState("")
-  const [profit, setProfit] = useState("")
-  const [margin, setMargin] = useState("")
   const [images, setImages] = useState<File[]>([])
-  const [bodegonAvailability, setBodegonAvailability] = useState<{[key: string]: {available: boolean, quantity: string}}>({})
+  const [bodegonAvailability, setBodegonAvailability] = useState<{[key: string]: boolean}>({})
   const [productStatus, setProductStatus] = useState("draft")
-  const [chargeTax, setChargeTax] = useState(false)
   const [inStock, setInStock] = useState(true)
 
   // Initialize bodegon availability when bodegones are loaded
   const initializeBodegonAvailability = useCallback(() => {
-    const initialAvailability: {[key: string]: {available: boolean, quantity: string}} = {}
+    const initialAvailability: {[key: string]: boolean} = {}
     bodegones.forEach(bodegon => {
-      initialAvailability[bodegon.id] = { available: false, quantity: "0" }
+      initialAvailability[bodegon.id] = false
     })
     setBodegonAvailability(initialAvailability)
   }, [bodegones])
@@ -127,58 +121,31 @@ export default function AgregarProductoPage() {
     // Subcategories are automatically updated through the hooks, no need to manually reload
   }
 
-  // Calculate Costo por item, Ganancia and Margen automatically
-  useEffect(() => {
-    const priceNum = parseFloat(price) || 0
-    const comparePriceNum = parseFloat(comparePrice) || 0
-    const quantityNum = parseFloat(quantity) || 1
-
-    // Costo por item = Precio / Cantidad
-    if (quantityNum > 0) {
-      const costPerItemValue = priceNum / quantityNum
-      setCostPerItem(costPerItemValue.toFixed(2))
-    } else {
-      setCostPerItem("0.00")
-    }
-
-    // Ganancia = Precio - Precio de compra
-    const profitValue = priceNum - comparePriceNum
-    setProfit(profitValue.toFixed(2))
-
-    // Margen = (Precio - Precio de compra) / Precio * 100
-    if (priceNum > 0) {
-      const marginValue = ((priceNum - comparePriceNum) / priceNum) * 100
-      setMargin(marginValue.toFixed(2))
-    } else {
-      setMargin("0.00")
-    }
-  }, [price, comparePrice, quantity])
 
   const handleBodegonAvailabilityChange = (bodegonId: string, available: boolean) => {
     setBodegonAvailability(prev => ({
       ...prev,
-      [bodegonId]: {
-        ...prev[bodegonId],
-        available,
-        quantity: available ? prev[bodegonId]?.quantity || "0" : "0"
-      }
-    }))
-  }
-
-  const handleBodegonQuantityChange = (bodegonId: string, quantity: string) => {
-    setBodegonAvailability(prev => ({
-      ...prev,
-      [bodegonId]: {
-        ...prev[bodegonId],
-        quantity
-      }
+      [bodegonId]: available
     }))
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newImages = Array.from(e.target.files)
-      setImages(prev => [...prev, ...newImages].slice(0, 6))
+      
+      // Validate file types
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+      const validImages = newImages.filter(file => {
+        const isValid = allowedTypes.includes(file.type.toLowerCase())
+        if (!isValid) {
+          toast.error(`Archivo ${file.name} no es válido. Solo se permiten archivos JPEG, PNG y WebP`)
+        }
+        return isValid
+      })
+      
+      if (validImages.length > 0) {
+        setImages(prev => [...prev, ...validImages].slice(0, 6))
+      }
     }
   }
 
@@ -202,11 +169,6 @@ export default function AgregarProductoPage() {
     
     if (!price || parseFloat(price) <= 0) {
       alert("El precio debe ser mayor a 0")
-      return
-    }
-    
-    if (!quantity || parseFloat(quantity) <= 0) {
-      alert("La cantidad debe ser mayor a 0")
       return
     }
 
@@ -237,15 +199,24 @@ export default function AgregarProductoPage() {
           category_id: categoryId || undefined,
           subcategory_id: subcategoryId || undefined,
           price: parseFloat(price),
-          purchase_price: comparePrice ? parseFloat(comparePrice) : undefined,
-          quantity_in_pack: parseFloat(quantity),
-          is_active_product: true,
+          is_active_product: productStatus === "active",
           is_discount: false,
           is_promo: false,
+          discounted_price: null,
           image_gallery_urls: imageUrls
         }
 
-        const createdProduct = await createProduct(productData)
+        // Get selected bodegones (only those marked as available)
+        const selectedBodegones = Object.keys(bodegonAvailability).filter(
+          bodegonId => bodegonAvailability[bodegonId] === true
+        )
+
+        if (selectedBodegones.length === 0) {
+          alert("Debe seleccionar al menos un bodegón donde el producto estará disponible")
+          return
+        }
+
+        const createdProduct = await createProductWithInventory(productData, selectedBodegones)
         
         if (createdProduct) {
           toast.success("¡Producto creado exitosamente!")
@@ -397,7 +368,7 @@ export default function AgregarProductoPage() {
                     <input
                       type="file"
                       multiple
-                      accept="image/*"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
                       onChange={handleImageUpload}
                       className="hidden"
                       id="image-upload"
@@ -599,42 +570,26 @@ export default function AgregarProductoPage() {
                       <div className="text-sm text-muted-foreground">Cargando bodegones...</div>
                     ) : bodegones.length > 0 ? (
                       bodegones.map((bodegon) => (
-                        <div key={bodegon.id} className="flex items-center gap-4 p-3 border rounded-lg">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`bodegon-${bodegon.id}`}
-                              checked={bodegonAvailability[bodegon.id]?.available || false}
-                              onCheckedChange={(checked) => 
-                                handleBodegonAvailabilityChange(bodegon.id, checked === true)
-                              }
-                            />
-                            <div className="grid gap-1.5 leading-none">
-                              <label
-                                htmlFor={`bodegon-${bodegon.id}`}
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                              >
-                                {bodegon.name}
-                              </label>
-                              {bodegon.address && (
-                                <p className="text-xs text-muted-foreground">
-                                  {bodegon.address}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="ml-auto flex items-center gap-2">
-                            <Label htmlFor={`quantity-${bodegon.id}`} className="text-sm">
-                              Cantidad:
-                            </Label>
-                            <Input
-                              id={`quantity-${bodegon.id}`}
-                              type="number"
-                              value={bodegonAvailability[bodegon.id]?.quantity || "0"}
-                              onChange={(e) => handleBodegonQuantityChange(bodegon.id, e.target.value)}
-                              disabled={!bodegonAvailability[bodegon.id]?.available}
-                              className="w-20"
-                              min="0"
-                            />
+                        <div key={bodegon.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                          <Checkbox
+                            id={`bodegon-${bodegon.id}`}
+                            checked={bodegonAvailability[bodegon.id] || false}
+                            onCheckedChange={(checked) => 
+                              handleBodegonAvailabilityChange(bodegon.id, checked === true)
+                            }
+                          />
+                          <div className="grid gap-1.5 leading-none flex-1">
+                            <label
+                              htmlFor={`bodegon-${bodegon.id}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            >
+                              {bodegon.name}
+                            </label>
+                            {bodegon.address && (
+                              <p className="text-xs text-muted-foreground">
+                                {bodegon.address}
+                              </p>
+                            )}
                           </div>
                         </div>
                       ))
@@ -656,37 +611,23 @@ export default function AgregarProductoPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="price">Precio Base</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="0.00"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="comparePrice">Precio Descontado</Label>
-                    <Input
-                      id="comparePrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={comparePrice}
-                      onChange={(e) => setComparePrice(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="tax" 
-                      checked={chargeTax}
-                      onCheckedChange={(checked) => setChargeTax(checked === true)}
-                    />
-                    <Label htmlFor="tax">Cobrar impuesto en este producto</Label>
+                    <Label htmlFor="price">Precio *</Label>
+                    <div className="flex">
+                      <span className="inline-flex items-center px-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">
+                        USD
+                      </span>
+                      <Input
+                        id="price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        placeholder="0.00"
+                        className="rounded-l-none"
+                        required
+                      />
+                    </div>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t">
                     <Label className="flex items-center space-x-2">

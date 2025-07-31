@@ -9,6 +9,7 @@ import {
   ProductsPagination,
   ProductsResponse
 } from "@/types/products"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 const mockProducts: BodegonProduct[] = [
   {
@@ -196,7 +197,130 @@ export function useBodegonProducts() {
     }
   }
 
-  // Crear producto
+  // Crear producto con inventario (nueva implementación para bodegon_products y bodegon_inventories)
+  const createProductWithInventory = async (
+    productData: {
+      name: string
+      description?: string
+      image_gallery_urls?: string[]
+      bar_code?: string
+      sku?: string
+      category_id?: string
+      subcategory_id?: string
+      price: number
+      is_active_product?: boolean
+      is_discount?: boolean
+      is_promo?: boolean
+      discounted_price?: number | null
+    },
+    selectedBodegones: string[]
+  ): Promise<any | null> => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Check if Supabase is configured
+      const configured = isSupabaseConfigured()
+      
+      if (!configured || !supabase) {
+        throw new Error('Base de datos no configurada')
+      }
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        throw new Error('Usuario no autenticado')
+      }
+
+      const now = new Date()
+
+      // 1. Create product in bodegon_products table
+      const { data: productResult, error: productError } = await supabase
+        .from('bodegon_products')
+        .insert({
+          name: productData.name.trim(),
+          description: productData.description?.trim() || null,
+          image_gallery_urls: productData.image_gallery_urls || [],
+          bar_code: productData.bar_code?.trim() || null,
+          sku: productData.sku?.trim() || null,
+          category_id: productData.category_id || null,
+          subcategory_id: productData.subcategory_id || null,
+          price: productData.price,
+          is_active_product: productData.is_active_product ?? true,
+          is_discount: productData.is_discount ?? false,
+          is_promo: productData.is_promo ?? false,
+          discounted_price: productData.discounted_price || null,
+          created_by: user.id,
+          created_date: now,
+          modified_date: now
+        })
+        .select()
+        .single()
+
+      if (productError) {
+        console.error('Error creating product:', productError)
+        throw new Error(productError.message)
+      }
+
+      console.log('✅ Product created successfully:', productResult)
+
+      // 2. Create inventory entries for selected bodegones
+      if (selectedBodegones.length > 0) {
+        const inventoryEntries = selectedBodegones.map(bodegonId => ({
+          product_id: productResult.id,
+          bodegon_id: bodegonId,
+          is_available_at_bodegon: true,
+          created_by: user.id,
+          modified_date: now
+        }))
+
+        console.log('🔄 Creating inventory entries:', inventoryEntries)
+
+        const { data: inventoryData, error: inventoryError } = await supabase
+          .from('bodegon_inventories')
+          .insert(inventoryEntries)
+          .select()
+
+        if (inventoryError) {
+          console.error('❌ Error creating inventory entries:', inventoryError)
+          console.error('❌ Inventory error details:', {
+            message: inventoryError.message,
+            details: inventoryError.details,
+            hint: inventoryError.hint,
+            code: inventoryError.code
+          })
+          
+          // Try to rollback the product creation
+          try {
+            await supabase
+              .from('bodegon_products')
+              .delete()
+              .eq('id', productResult.id)
+            console.log('✅ Product rollback successful')
+          } catch (rollbackError) {
+            console.error('❌ Rollback failed:', rollbackError)
+          }
+          
+          throw new Error(`Error al crear el inventario del producto: ${inventoryError.message}`)
+        }
+
+        console.log('✅ Inventory entries created successfully:', inventoryData)
+
+        console.log('✅ Inventory entries created successfully for', selectedBodegones.length, 'bodegones')
+      }
+
+      return productResult
+    } catch (err: any) {
+      console.error('Error creating product with inventory:', err)
+      setError(err.message || 'Error al crear producto')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Crear producto (implementación original para compatibilidad)
   const createProduct = async (productData: CreateBodegonProductData): Promise<BodegonProduct | null> => {
     try {
       setLoading(true)
@@ -349,6 +473,7 @@ export function useBodegonProducts() {
     getProducts,
     getProductById,
     createProduct,
+    createProductWithInventory,
     updateProduct,
     deleteProduct,
     toggleProductActive,
