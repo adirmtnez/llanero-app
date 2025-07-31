@@ -83,6 +83,7 @@ export function useRestaurants() {
         .order('name', { ascending: true })
 
       if (supabaseError) {
+        console.error('Supabase error:', supabaseError)
         throw new Error(supabaseError.message)
       }
 
@@ -91,11 +92,11 @@ export function useRestaurants() {
         id: item.id, // Keep as-is, don't convert
         name: item.name || '',
         phone_number: item.phone_number || '',
-        logo_url: item.logo_url || null,
-        cover_image: item.cover_image || null,
+        logo_url: item.logo_url ?? null,
+        cover_image: item.cover_image ?? null,
         delivery_available: item.delivery_available !== false,
         pickup_available: item.pickup_available !== false,
-        opening_hours: item.opening_hours || null,
+        opening_hours: item.opening_hours ?? null,
         is_active: item.is_active !== false,
         created_date: item.created_date,
         modified_date: item.modified_date
@@ -175,6 +176,7 @@ export function useRestaurants() {
         .single()
 
       if (supabaseError) {
+        console.error('Supabase error:', supabaseError)
         throw new Error(supabaseError.message)
       }
 
@@ -309,6 +311,7 @@ export function useRestaurants() {
         .eq('id', id)
 
       if (supabaseError) {
+        console.error('Supabase error:', supabaseError)
         throw new Error(supabaseError.message)
       }
 

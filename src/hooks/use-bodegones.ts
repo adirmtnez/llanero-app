@@ -79,6 +79,7 @@ export function useBodegones() {
         .order('name', { ascending: true })
 
       if (supabaseError) {
+        console.error('Supabase error:', supabaseError)
         throw new Error(supabaseError.message)
       }
 
@@ -86,10 +87,10 @@ export function useBodegones() {
       const mappedBodegones: Bodegon[] = (data || []).map(item => ({
         id: item.id, // Keep as-is, don't convert
         name: item.name || '',
-        address: item.address || null,
+        address: item.address ?? null,
         phone_number: item.phone_number || '',
         is_active: item.is_active !== false,
-        logo_url: item.logo_url || null,
+        logo_url: item.logo_url ?? null,
         created_date: item.created_date,
         modified_date: item.modified_date
       }))
@@ -166,6 +167,7 @@ export function useBodegones() {
         .single()
 
       if (supabaseError) {
+        console.error('Supabase error:', supabaseError)
         throw new Error(supabaseError.message)
       }
 
@@ -291,6 +293,7 @@ export function useBodegones() {
         .eq('id', id)
 
       if (supabaseError) {
+        console.error('Supabase error:', supabaseError)
         throw new Error(supabaseError.message)
       }
 
