@@ -88,6 +88,7 @@ export default function BodegonesPage() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingBodegon, setEditingBodegon] = useState<any>(null)
   const [deletingBodegon, setDeletingBodegon] = useState<any>(null)
   const [activeFilter, setActiveFilter] = useState("all")
@@ -267,13 +268,10 @@ export default function BodegonesPage() {
           </div>
         )}
 
-        {/* Loading state */}
-        {loading && (
-          <TableLoading rows={5} columns={3} showCheckbox={true} showActions={true} />
-        )}
-
         {/* Bodegones table */}
-        {!loading && bodegones.length > 0 ? (
+        {loading ? (
+          <TableLoading rows={5} columns={4} showCheckbox={true} showActions={true} />
+        ) : bodegones.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -328,7 +326,8 @@ export default function BodegonesPage() {
                               onClick={() => {
                                 const fullBodegon = mockBodegones.find(b => b.id === bodegon.id)
                                 if (fullBodegon) {
-                                  router.push(`/admin/bodegones/${bodegon.id}`)
+                                  setEditingBodegon(fullBodegon)
+                                  setIsEditModalOpen(true)
                                 }
                               }}
                             >
@@ -360,7 +359,7 @@ export default function BodegonesPage() {
               <Store className="h-6 w-6 text-muted-foreground/50" />
             </div>
             <div className="text-center space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
+              <p className="text-lg font-medium text-foreground">
                 {!isConfigured
                     ? "Los bodegones se muestran desde datos mock"
                     : activeFilter === "active"
@@ -371,26 +370,21 @@ export default function BodegonesPage() {
                 }
               </p>
               {!isConfigured && (
-                <p className="text-xs text-muted-foreground max-w-sm">
+                <p className="text-sm text-muted-foreground">
                   Los bodegones se muestran desde datos mock para demostración
                 </p>
               )}
               {isConfigured && (
-                <p className="text-xs text-muted-foreground max-w-sm">
+                <p className="text-sm text-muted-foreground">
                   Agrega bodegones para expandir tu red de distribución y llegar a más clientes
                 </p>
               )}
             </div>
             {isConfigured && (
-              <div className="pt-2">
-                <Button 
-                  size="sm"
-                  onClick={() => setIsAddModalOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar bodegón
-                </Button>
-              </div>
+              <Button onClick={() => setIsAddModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar bodegón
+              </Button>
             )}
           </div>
         ) : null}
@@ -404,8 +398,9 @@ export default function BodegonesPage() {
         />
 
         <EditBodegonModal 
-          open={!!editingBodegon}
+          open={isEditModalOpen}
           onOpenChange={(open) => {
+            setIsEditModalOpen(open)
             if (!open) {
               setEditingBodegon(null)
             }
@@ -413,6 +408,8 @@ export default function BodegonesPage() {
           bodegon={editingBodegon}
           onSuccess={() => {
             refreshBodegones()
+            setIsEditModalOpen(false)
+            setEditingBodegon(null)
           }}
         />
 

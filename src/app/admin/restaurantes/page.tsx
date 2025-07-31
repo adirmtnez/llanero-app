@@ -94,6 +94,7 @@ export default function RestaurantesPage() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingRestaurant, setEditingRestaurant] = useState<any>(null)
   const [deletingRestaurant, setDeletingRestaurant] = useState<any>(null)
   const [activeFilter, setActiveFilter] = useState("all")
@@ -273,18 +274,15 @@ export default function RestaurantesPage() {
           </div>
         )}
 
-        {/* Loading state */}
-        {loading && (
+        {/* Restaurantes table */}
+        {loading ? (
           <TableSkeleton 
             rows={5} 
-            columns={3} 
+            columns={5} 
             showCheckbox={true} 
             showActions={true}
           />
-        )}
-
-        {/* Restaurantes table */}
-        {!loading && restaurantes.length > 0 ? (
+        ) : restaurantes.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -339,7 +337,8 @@ export default function RestaurantesPage() {
                               onClick={() => {
                                 const fullRestaurant = mockRestaurants.find(r => r.id === restaurante.id)
                                 if (fullRestaurant) {
-                                  router.push(`/admin/restaurantes/${restaurante.id}`)
+                                  setEditingRestaurant(fullRestaurant)
+                                  setIsEditModalOpen(true)
                                 }
                               }}
                             >
@@ -371,7 +370,7 @@ export default function RestaurantesPage() {
               <UtensilsCrossed className="h-6 w-6 text-muted-foreground/50" />
             </div>
             <div className="text-center space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
+              <p className="text-lg font-medium text-foreground">
                 {!isConfigured
                   ? "Los restaurantes se muestran desde datos mock"
                   : activeFilter === "active"
@@ -382,26 +381,21 @@ export default function RestaurantesPage() {
                 }
               </p>
               {!isConfigured && (
-                <p className="text-xs text-muted-foreground max-w-sm">
+                <p className="text-sm text-muted-foreground">
                   Los restaurantes se muestran desde datos mock para demostración
                 </p>
               )}
               {isConfigured && (
-                <p className="text-xs text-muted-foreground max-w-sm">
+                <p className="text-sm text-muted-foreground">
                   Agrega restaurantes para ampliar tu oferta gastronómica y atraer más clientes
                 </p>
               )}
             </div>
             {isConfigured && (
-              <div className="pt-2">
-                <Button 
-                  size="sm"
-                  onClick={() => setIsAddModalOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar restaurante
-                </Button>
-              </div>
+              <Button onClick={() => setIsAddModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar restaurante
+              </Button>
             )}
           </div>
         ) : null}
@@ -415,8 +409,9 @@ export default function RestaurantesPage() {
         />
 
         <EditRestaurantModal 
-          open={!!editingRestaurant}
+          open={isEditModalOpen}
           onOpenChange={(open) => {
+            setIsEditModalOpen(open)
             if (!open) {
               setEditingRestaurant(null)
             }
@@ -424,6 +419,8 @@ export default function RestaurantesPage() {
           restaurant={editingRestaurant}
           onSuccess={() => {
             refreshRestaurants()
+            setIsEditModalOpen(false)
+            setEditingRestaurant(null)
           }}
         />
 

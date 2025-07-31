@@ -53,7 +53,7 @@ export function TeamSwitcher() {
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">Llanero app</span>
-              <span className="truncate text-xs">Cargando...</span>
+              <span className="truncate text-xs">Gestión completa</span>
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>

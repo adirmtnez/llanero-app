@@ -270,18 +270,15 @@ export default function MetodosPagoPage() {
           </div>
         </div>
 
-        {/* Loading state */}
-        {loading && (
+        {/* Payment Methods table */}
+        {loading ? (
           <TableLoading 
             rows={5} 
-            columns={3} 
+            columns={4} 
             showCheckbox={true} 
             showActions={true}
           />
-        )}
-
-        {/* Payment Methods table */}
-        {!loading && paymentMethods.length > 0 ? (
+        ) : paymentMethods.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -365,10 +362,17 @@ export default function MetodosPagoPage() {
               <CreditCard className="h-6 w-6 text-muted-foreground/50" />
             </div>
             <div className="text-center space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
-                {`No hay métodos de pago ${activeFilter === "nacional" ? "nacionales" : activeFilter === "internacional" ? "internacionales" : "que coincidan con los filtros"}`}
+              <p className="text-lg font-medium text-foreground">
+                No tienes métodos de pago aún
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Los métodos de pago se muestran desde datos mock locales
               </p>
             </div>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Agregar método de pago
+            </Button>
           </div>
         )}
       </div>

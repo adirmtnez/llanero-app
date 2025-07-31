@@ -42,45 +42,96 @@ import {
 import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
-
-const demoCategories = [
-  {
-    id: "1",
-    name: "Salsas",
-    productCount: 0,
-    status: "Visible",
-    image: "/images/salsas.jpg",
-  },
-  {
-    id: "2", 
-    name: "Familia",
-    productCount: 4,
-    status: "Visible",
-    image: "/images/familia.jpg",
-  },
-  {
-    id: "3",
-    name: "Platos Principales",
-    productCount: 20,
-    status: "Visible",
-    image: "/images/platos.jpg",
-  },
-]
+import { toast } from "sonner"
+import { AddCategoryModal } from "@/components/modals/add-category-modal"
+import { EditCategoryModal } from "@/components/modals/edit-category-modal"
+import { DeleteCategoryModal } from "@/components/modals/delete-category-modal"
+import { useBodegonCategories, BodegonCategory } from "@/hooks/use-bodegon-categories"
+import { useRestaurantCategories, RestaurantCategory } from "@/hooks/use-restaurant-categories"
+import { useRestaurants } from "@/hooks/use-restaurants"
 
 export default function CategoriasPage() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [loading, setLoading] = useState(true)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<(BodegonCategory & { categoryType: 'bodegon' }) | (RestaurantCategory & { categoryType: 'restaurant' }) | null>(null)
+  const [activeTab, setActiveTab] = useState("all")
   
-  const categories = demoCategories
+  const { categories: bodegonCategories, loading: bodegonLoading, refreshCategories: refreshBodegonCategories, updateCategory: updateBodegonCategory } = useBodegonCategories()
+  const { categories: restaurantCategories, loading: restaurantLoading, refreshCategories: refreshRestaurantCategories, updateCategory: updateRestaurantCategory } = useRestaurantCategories()
+  const { restaurants } = useRestaurants()
+  
+  // Helper function to get restaurant name by ID
+  const getRestaurantName = (restaurantId: string) => {
+    const restaurant = restaurants.find(r => r.id === restaurantId)
+    return restaurant ? restaurant.name : 'N/A'
+  }
+  
+  // Combine categories with type information
+  const allCategories = [
+    ...bodegonCategories.map(cat => ({ ...cat, categoryType: 'bodegon' as const })),
+    ...restaurantCategories.map(cat => ({ ...cat, categoryType: 'restaurant' as const }))
+  ]
+  
+  // Filter categories based on active tab
+  const filteredCategories = allCategories.filter(category => {
+    if (activeTab === 'all') return true
+    if (activeTab === 'bodegon') return category.categoryType === 'bodegon'
+    if (activeTab === 'restaurant') return category.categoryType === 'restaurant'
+    if (activeTab === 'visible') return category.is_active
+    if (activeTab === 'hidden') return !category.is_active
+    return true
+  })
+  
+  const loading = bodegonLoading || restaurantLoading
+  const categories = filteredCategories
 
-  // Simulate loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 800)
-    return () => clearTimeout(timer)
-  }, [])
+  // Helper functions for category actions
+  const handleEditCategory = (category: (BodegonCategory & { categoryType: 'bodegon' }) | (RestaurantCategory & { categoryType: 'restaurant' })) => {
+    setSelectedCategory(category)
+    setShowEditModal(true)
+  }
+
+  const handleDeleteCategory = (category: (BodegonCategory & { categoryType: 'bodegon' }) | (RestaurantCategory & { categoryType: 'restaurant' })) => {
+    setSelectedCategory(category)
+    setShowDeleteModal(true)
+  }
+
+  const handleToggleActive = async (category: (BodegonCategory & { categoryType: 'bodegon' }) | (RestaurantCategory & { categoryType: 'restaurant' })) => {
+    try {
+      const updateCategory = category.categoryType === 'bodegon' ? updateBodegonCategory : updateRestaurantCategory
+      const result = await updateCategory(category.id, {
+        is_active: !category.is_active
+      })
+
+      if (result.error) {
+        throw new Error(result.error)
+      }
+
+      toast.success(
+        category.is_active 
+          ? "Categoría desactivada exitosamente" 
+          : "Categoría activada exitosamente"
+      )
+
+      // Refresh data
+      refreshBodegonCategories()
+      refreshRestaurantCategories()
+    } catch (error: any) {
+      console.error('Error toggling category status:', error)
+      toast.error("Error al cambiar estado", {
+        description: error.message || "Ocurrió un error inesperado"
+      })
+    }
+  }
+
+  const handleModalSuccess = () => {
+    refreshBodegonCategories()
+    refreshRestaurantCategories()
+    setSelectedCategory(null)
+  }
 
   return (
     <>
@@ -150,7 +201,11 @@ export default function CategoriasPage() {
                 <DropdownMenuItem>Eliminar seleccionados</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm" className="flex-1 sm:flex-none justify-center">
+            <Button 
+              size="sm" 
+              className="flex-1 sm:flex-none justify-center"
+              onClick={() => setShowAddModal(true)}
+            >
               <Plus className="h-4 w-4 mr-2" />
               <span className="hidden xs:inline">Agregar categoría</span>
               <span className="xs:hidden">Agregar</span>
@@ -160,12 +215,13 @@ export default function CategoriasPage() {
 
         {/* Filter tabs */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <Tabs defaultValue="all" className="w-auto overflow-x-auto">
-            <TabsList className="grid w-full grid-cols-5 sm:w-auto sm:flex">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto overflow-x-auto">
+            <TabsList className="grid w-full grid-cols-6 sm:w-auto sm:flex">
               <TabsTrigger value="all">Todas</TabsTrigger>
-              <TabsTrigger value="visible">Visibles</TabsTrigger>
-              <TabsTrigger value="hidden">Ocultas</TabsTrigger>
-              <TabsTrigger value="archived" className="text-xs sm:text-sm">Archivadas</TabsTrigger>
+              <TabsTrigger value="bodegon">Bodegón</TabsTrigger>
+              <TabsTrigger value="restaurant">Restaurante</TabsTrigger>
+              <TabsTrigger value="visible">Activas</TabsTrigger>
+              <TabsTrigger value="hidden">Inactivas</TabsTrigger>
               <TabsTrigger value="add" className="text-muted-foreground">
                 <Plus className="h-4 w-4" />
               </TabsTrigger>
@@ -209,18 +265,15 @@ export default function CategoriasPage() {
           </div>
         </div>
 
-        {/* Loading state */}
-        {loading && (
+        {/* Categories table */}
+        {loading ? (
           <TableSkeleton 
             rows={5} 
-            columns={3} 
+            columns={4} 
             showCheckbox={true} 
             showActions={true}
           />
-        )}
-
-        {/* Categories table */}
-        {!loading && categories.length > 0 ? (
+        ) : categories.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -230,6 +283,8 @@ export default function CategoriasPage() {
                       <Checkbox />
                     </TableHead>
                     <TableHead className="min-w-[200px]">Nombre</TableHead>
+                    <TableHead className="min-w-[100px]">Tipo</TableHead>
+                    <TableHead className="min-w-[150px]">Restaurante</TableHead>
                     <TableHead className="min-w-[120px]">Productos</TableHead>
                     <TableHead className="min-w-[100px]">Estatus</TableHead>
                     <TableHead className="w-12"></TableHead>
@@ -243,24 +298,55 @@ export default function CategoriasPage() {
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
-                            <div className="w-4 h-4 sm:w-6 sm:h-6 bg-muted-foreground/20 rounded"></div>
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {category.image ? (
+                              <img 
+                                src={category.image} 
+                                alt={category.name}
+                                className="w-full h-full object-cover rounded"
+                              />
+                            ) : (
+                              <Package className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                            )}
                           </div>
                           <span className="truncate">{category.name}</span>
                         </div>
                       </TableCell>
                       <TableCell>
+                        <Badge 
+                          variant="outline"
+                          className={category.categoryType === 'bodegon' 
+                            ? "bg-blue-50 text-blue-700 border-blue-200" 
+                            : "bg-orange-50 text-orange-700 border-orange-200"
+                          }
+                        >
+                          {category.categoryType === 'bodegon' ? 'Bodegón' : 'Restaurante'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {category.categoryType === 'restaurant' && 'restaurant_id' in category ? (
+                          <span className="text-sm text-muted-foreground">
+                            {getRestaurantName(category.restaurant_id)}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <Package className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{category.productCount}</span>
+                          <span className="font-medium">0</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge 
                           variant="default"
-                          className="bg-green-100 text-green-800 hover:bg-green-100"
+                          className={category.is_active 
+                            ? "bg-green-100 text-green-800 hover:bg-green-100" 
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-100"
+                          }
                         >
-                          {category.status}
+                          {category.is_active ? "Activa" : "Inactiva"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -271,10 +357,16 @@ export default function CategoriasPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Editar</DropdownMenuItem>
-                            <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                            <DropdownMenuItem>Ocultar</DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem onClick={() => handleEditCategory(category)}>
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleToggleActive(category)}>
+                              {category.is_active ? "Desactivar" : "Activar"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeleteCategory(category)}
+                            >
                               Eliminar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -292,12 +384,48 @@ export default function CategoriasPage() {
               <Plus className="h-6 w-6 text-muted-foreground/50" />
             </div>
             <div className="text-center space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
-                No hay categorías que coincidan con los filtros
+              <p className="text-lg font-medium text-foreground">
+                No tienes categorías aún
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Las categorías se muestran desde datos mock locales
               </p>
             </div>
+            <Button onClick={() => setShowAddModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Agregar categoría
+            </Button>
           </div>
         )}
+
+        {/* Add Category Modal */}
+        <AddCategoryModal 
+          open={showAddModal}
+          onOpenChange={setShowAddModal}
+          onSuccess={handleModalSuccess}
+        />
+
+        {/* Edit Category Modal */}
+        <EditCategoryModal 
+          open={showEditModal}
+          onOpenChange={(open) => {
+            setShowEditModal(open)
+            if (!open) setSelectedCategory(null)
+          }}
+          category={selectedCategory}
+          onSuccess={handleModalSuccess}
+        />
+
+        {/* Delete Category Modal */}
+        <DeleteCategoryModal 
+          open={showDeleteModal}
+          onOpenChange={(open) => {
+            setShowDeleteModal(open)
+            if (!open) setSelectedCategory(null)
+          }}
+          category={selectedCategory}
+          onSuccess={handleModalSuccess}
+        />
       </div>
     </>
   )

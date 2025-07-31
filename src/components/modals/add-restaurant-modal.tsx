@@ -50,7 +50,7 @@ interface RestaurantForm {
 
 export function AddRestaurantModal({ open, onOpenChange, onSuccess }: AddRestaurantModalProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
-  const { createRestaurant } = useRestaurants()
+  const { createRestaurant, updateRestaurant } = useRestaurants()
   const [formData, setFormData] = useState<RestaurantForm>({
     nombre: "",
     logo: null,
@@ -123,8 +123,11 @@ export function AddRestaurantModal({ open, onOpenChange, onSuccess }: AddRestaur
 
       // Upload images if provided and restaurant was created successfully
       if (result.data) {
+        const updates: { logo_url?: string; cover_image?: string } = {}
+        
         // Upload logo if provided
         if (formData.logo) {
+          console.log('🔄 Starting logo upload for restaurant:', result.data.id)
           const logoUploadResult = await uploadFileToStorage(
             formData.logo, 
             'restaurants', 
@@ -132,14 +135,19 @@ export function AddRestaurantModal({ open, onOpenChange, onSuccess }: AddRestaur
           )
 
           if (logoUploadResult.error) {
-            console.warn('Logo upload failed:', logoUploadResult.error)
+            console.error('❌ Logo upload failed:', logoUploadResult.error)
+            toast.error("Error subiendo logo", {
+              description: logoUploadResult.error
+            })
           } else if (logoUploadResult.url) {
-            console.log('Logo uploaded successfully:', logoUploadResult.url)
+            console.log('✅ Logo uploaded successfully:', logoUploadResult.url)
+            updates.logo_url = logoUploadResult.url
           }
         }
 
         // Upload cover image if provided
         if (formData.fotoPortada) {
+          console.log('🔄 Starting cover image upload for restaurant:', result.data.id)
           const coverUploadResult = await uploadFileToStorage(
             formData.fotoPortada, 
             'restaurants', 
@@ -147,9 +155,28 @@ export function AddRestaurantModal({ open, onOpenChange, onSuccess }: AddRestaur
           )
 
           if (coverUploadResult.error) {
-            console.warn('Cover image upload failed:', coverUploadResult.error)
+            console.error('❌ Cover image upload failed:', coverUploadResult.error)
+            toast.error("Error subiendo imagen de portada", {
+              description: coverUploadResult.error
+            })
           } else if (coverUploadResult.url) {
-            console.log('Cover image uploaded successfully:', coverUploadResult.url)
+            console.log('✅ Cover image uploaded successfully:', coverUploadResult.url)
+            updates.cover_image = coverUploadResult.url
+          }
+        }
+
+        // Update restaurant with image URLs if any were uploaded
+        if (Object.keys(updates).length > 0) {
+          console.log('🔄 Updating restaurant with image URLs:', updates)
+          const updateResult = await updateRestaurant(result.data.id, updates)
+          
+          if (updateResult.error) {
+            console.error('❌ Failed to update restaurant with image URLs:', updateResult.error)
+            toast.error("Error guardando imágenes", {
+              description: updateResult.error
+            })
+          } else {
+            console.log('✅ Restaurant updated with image URLs successfully')
           }
         }
       }

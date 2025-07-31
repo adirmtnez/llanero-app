@@ -49,7 +49,7 @@ interface BodegonForm {
 
 export function AddBodegonModal({ open, onOpenChange, onSuccess }: AddBodegonModalProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
-  const { createBodegon } = useBodegones()
+  const { createBodegon, updateBodegon } = useBodegones()
   const [formData, setFormData] = useState<BodegonForm>({
     nombre: "",
     direccion: "",
@@ -119,6 +119,7 @@ export function AddBodegonModal({ open, onOpenChange, onSuccess }: AddBodegonMod
 
       // Upload logo if provided and bodegon was created successfully
       if (formData.logo && result.data) {
+        console.log('🔄 Starting logo upload for bodegon:', result.data.id)
         const uploadResult = await uploadFileToStorage(
           formData.logo, 
           'bodegons', 
@@ -126,12 +127,33 @@ export function AddBodegonModal({ open, onOpenChange, onSuccess }: AddBodegonMod
         )
 
         if (uploadResult.error) {
-          console.warn('Logo upload failed:', uploadResult.error)
+          console.error('❌ Logo upload failed:', uploadResult.error)
+          toast.error("Error subiendo logo", {
+            description: uploadResult.error
+          })
           // Continue without logo - don't fail the entire operation
         } else if (uploadResult.url) {
-          // Update bodegon with logo URL using the hook if available
-          // For now, we'll just log it - you could add an updateBodegon function later
-          console.log('Logo uploaded successfully:', uploadResult.url)
+          // Update bodegon with logo URL
+          console.log('✅ Logo uploaded successfully, updating bodegon with URL:', uploadResult.url)
+          console.log('🔄 Calling updateBodegon with ID:', result.data.id)
+          
+          const updateResult = await updateBodegon(result.data.id, {
+            logo_url: uploadResult.url
+          })
+          
+          console.log('📤 UpdateBodegon result:', updateResult)
+          
+          if (updateResult.error) {
+            console.error('❌ Failed to update bodegon with logo URL:', updateResult.error)
+            toast.error("Error guardando logo", {
+              description: updateResult.error
+            })
+            // Continue - bodegon was created successfully even if logo update failed
+          } else {
+            console.log('✅ Bodegon updated with logo URL successfully')
+          }
+        } else {
+          console.warn('⚠️ Upload result has no URL and no error')
         }
       }
 

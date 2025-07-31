@@ -39,10 +39,19 @@ import {
   X
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useBodegonProducts } from "@/hooks/use-bodegon-products"
-import { useCategories } from "@/hooks/use-categories"
+import { useBodegonCategories } from "@/hooks/use-bodegon-categories"
+import { useRestaurantCategories } from "@/hooks/use-restaurant-categories"
+import { useRestaurants } from "@/hooks/use-restaurants"
 import { DeleteProductModal } from "@/components/modals/delete-product-modal"
 import { BodegonProduct } from "@/types/products"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
@@ -95,25 +104,38 @@ export default function ProductosPage() {
   const [realProducts, setRealProducts] = useState<BodegonProduct[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
+  const [productType, setProductType] = useState<'bodegon' | 'restaurant'>('bodegon')
+  const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
   
-  const { getProducts, deleteProduct, loading, formatPrice } = useBodegonProducts()
-  const bodegonCategories = useCategories('bodegon')
+  const { getProducts, getRestaurantProducts, deleteProduct, loading, formatPrice } = useBodegonProducts()
+  const { categories: bodegonCategories } = useBodegonCategories()
+  const { categories: restaurantCategories } = useRestaurantCategories()
+  const { restaurants } = useRestaurants()
   
   // Función para obtener el nombre de categoría
-  const getCategoryName = (categoryId?: string) => {
+  const getCategoryName = (categoryId?: string, type: 'bodegon' | 'restaurant' = 'bodegon') => {
     if (!categoryId) return "Sin categoría"
-    const category = bodegonCategories.categories.find(cat => cat.id === categoryId)
+    const categories = type === 'bodegon' ? bodegonCategories : restaurantCategories
+    const category = categories.find(cat => cat.id === categoryId)
     return category?.name || "Sin categoría"
+  }
+  
+  // Función para obtener el nombre del restaurante
+  const getRestaurantName = (restaurantId?: string) => {
+    if (!restaurantId) return "Sin restaurante"
+    const restaurant = restaurants.find(rest => rest.id === restaurantId)
+    return restaurant?.name || "Sin restaurante"
   }
 
   // Función para mapear productos reales al formato de la tabla
   const mapProductToTableFormat = (product: BodegonProduct) => ({
     id: product.id,
     name: product.name,
-    sku: product.sku || "N/A",
+    sku: product.sku || (product.product_type === 'restaurant' ? "N/A" : "N/A"),
     status: product.is_active_product ? "Active" : "Draft",
-    inventory: `${product.quantity_in_pack || 0} en stock`,
-    category: getCategoryName(product.category_id),
+    inventory: product.is_active_product ? "Disponible" : "No disponible",
+    category: getCategoryName(product.category_id, product.product_type || 'bodegon'),
+    restaurant: product.restaurant_id ? getRestaurantName(product.restaurant_id) : undefined,
     price: formatPrice(product.price),
     raw: product // Mantener el objeto original para operaciones
   })
@@ -122,18 +144,29 @@ export default function ProductosPage() {
 
   // Cargar productos reales
   const loadProducts = async () => {
-    const result = await getProducts(
-      { search: searchQuery },
-      { page: currentPage, limit: 25 }
-    )
+    let result
+    if (productType === 'bodegon') {
+      result = await getProducts(
+        { search: searchQuery },
+        { page: currentPage, limit: 25 }
+      )
+    } else {
+      result = await getRestaurantProducts(
+        { 
+          search: searchQuery,
+          restaurant_id: selectedRestaurant && selectedRestaurant !== 'all' ? selectedRestaurant : undefined
+        },
+        { page: currentPage, limit: 25 }
+      )
+    }
     setRealProducts(result.products)
     setTotalPages(result.pagination.totalPages)
   }
 
-  // Cargar productos cuando cambie la página o búsqueda
+  // Cargar productos cuando cambie la página, búsqueda, tipo de producto o restaurante
   useEffect(() => {
     loadProducts()
-  }, [currentPage, searchQuery])
+  }, [currentPage, searchQuery, productType, selectedRestaurant])
 
   // Recargar al cambiar el término de búsqueda
   useEffect(() => {
@@ -144,6 +177,12 @@ export default function ProductosPage() {
 
     return () => clearTimeout(timeoutId)
   }, [searchQuery])
+  
+  // Reset restaurant filter when changing product type
+  useEffect(() => {
+    setSelectedRestaurant('all')
+    setCurrentPage(1)
+  }, [productType])
 
   const handleEdit = (product: { id: string }) => {
     router.push(`/admin/productos/${product.id}/editar`)
@@ -238,19 +277,52 @@ export default function ProductosPage() {
           </div>
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <Tabs defaultValue="all" className="w-auto overflow-x-auto">
-            <TabsList className="grid w-full grid-cols-5 sm:w-auto sm:flex">
-              <TabsTrigger value="all">Todos</TabsTrigger>
-              <TabsTrigger value="active">Activos</TabsTrigger>
-              <TabsTrigger value="draft">Borrador</TabsTrigger>
-              <TabsTrigger value="archived" className="text-xs sm:text-sm">Archivados</TabsTrigger>
-              <TabsTrigger value="add" className="text-muted-foreground">
-                <Plus className="h-4 w-4" />
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        {/* Filter tabs, Product Type Filters, and Search - All in one row */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
+            <Tabs defaultValue="all" className="w-auto overflow-x-auto">
+              <TabsList className="grid w-full grid-cols-5 sm:w-auto sm:flex">
+                <TabsTrigger value="all">Todos</TabsTrigger>
+                <TabsTrigger value="active">Activos</TabsTrigger>
+                <TabsTrigger value="draft">Borrador</TabsTrigger>
+                <TabsTrigger value="archived" className="text-xs sm:text-sm">Archivados</TabsTrigger>
+                <TabsTrigger value="add" className="text-muted-foreground">
+                  <Plus className="h-4 w-4" />
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            {/* Product Type and Restaurant Filters */}
+            <div className="flex items-center gap-2">
+              <Select value={productType} onValueChange={(value: 'bodegon' | 'restaurant') => setProductType(value)}>
+                <SelectTrigger className="w-[140px] bg-white">
+                  <SelectValue placeholder="Tipo de producto" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="bodegon">Bodegón</SelectItem>
+                  <SelectItem value="restaurant">Restaurante</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {productType === 'restaurant' && (
+                <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
+                  <SelectTrigger className="w-[160px] bg-white">
+                    <SelectValue placeholder="Filtrar por restaurante" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="all">Todos los restaurantes</SelectItem>
+                    {restaurants.map((restaurant) => (
+                      <SelectItem key={restaurant.id} value={restaurant.id}>
+                        {restaurant.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+          
+          {/* Search and Filter Actions */}
           <div className="flex items-center gap-2">
             {isSearchExpanded ? (
               <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-background w-full sm:min-w-[300px]">
@@ -304,10 +376,11 @@ export default function ProductosPage() {
                       <Checkbox />
                     </TableHead>
                     <TableHead className="min-w-[200px]">Producto</TableHead>
-                    <TableHead className="min-w-[120px]">SKU</TableHead>
+                    {productType === 'bodegon' && <TableHead className="min-w-[120px]">SKU</TableHead>}
                     <TableHead className="min-w-[100px]">Estado</TableHead>
                     <TableHead className="min-w-[120px]">Inventario</TableHead>
                     <TableHead className="min-w-[120px]">Categoría</TableHead>
+                    {productType === 'restaurant' && <TableHead className="min-w-[150px]">Restaurante</TableHead>}
                     <TableHead className="min-w-[100px]">Precio</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
@@ -326,9 +399,11 @@ export default function ProductosPage() {
                           <span className="truncate">{product.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground font-mono text-xs sm:text-sm">
-                        <span className="block truncate">{product.sku}</span>
-                      </TableCell>
+                      {productType === 'bodegon' && (
+                        <TableCell className="text-muted-foreground font-mono text-xs sm:text-sm">
+                          <span className="block truncate">{product.sku}</span>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Badge 
                           variant={product.status === "Active" ? "default" : "secondary"}
@@ -337,14 +412,21 @@ export default function ProductosPage() {
                           {product.status === "Active" ? "Activo" : product.status === "Draft" ? "Borrador" : product.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className={product.inventory.includes("0") ? "text-red-600" : "text-green-600"}>
-                        {product.inventory.replace("in stock", "en stock")}
+                      <TableCell className={product.inventory === "No disponible" ? "text-red-600" : "text-green-600"}>
+                        {product.inventory}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         <span className="truncate block">
                           {product.category === "Uncategorized" ? "Sin categoría" : product.category}
                         </span>
                       </TableCell>
+                      {productType === 'restaurant' && (
+                        <TableCell className="text-muted-foreground">
+                          <span className="truncate block">
+                            {product.restaurant || "Sin restaurante"}
+                          </span>
+                        </TableCell>
+                      )}
                       <TableCell className="font-medium">
                         {product.price}
                       </TableCell>
@@ -377,33 +459,29 @@ export default function ProductosPage() {
             </div>
           </div>
         ) : (
-          <div className="border rounded-lg bg-white overflow-hidden">
-            <div className="flex flex-col items-center justify-center space-y-6 py-16">
-              <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-                <Plus className="h-6 w-6 text-muted-foreground/50" />
-              </div>
-              <div className="text-center space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {searchQuery ? "No se encontraron productos" : "No tienes productos aún"}
-                </p>
-                {!searchQuery && (
-                  <p className="text-xs text-muted-foreground max-w-sm">
-                    Los productos se muestran desde datos mock locales
-                  </p>
-                )}
-                {searchQuery && (
-                  <p className="text-xs text-muted-foreground max-w-sm">
-                    Intenta con otros términos de búsqueda o agrega nuevos productos
-                  </p>
-                )}
-              </div>
-              <div className="pt-2">
-                <Button size="sm" onClick={() => router.push("/admin/productos/agregar")}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar producto
-                </Button>
-              </div>
+          <div className="flex flex-col items-center justify-center space-y-6 py-16">
+            <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
+              <Plus className="h-6 w-6 text-muted-foreground/50" />
             </div>
+            <div className="text-center space-y-3">
+              <p className="text-lg font-medium text-foreground">
+                {searchQuery ? "No se encontraron productos" : "No tienes productos aún"}
+              </p>
+              {!searchQuery && (
+                <p className="text-sm text-muted-foreground">
+                  Comienza agregando tu primer producto al catálogo
+                </p>
+              )}
+              {searchQuery && (
+                <p className="text-sm text-muted-foreground">
+                  Intenta con otros términos de búsqueda o agrega nuevos productos
+                </p>
+              )}
+            </div>
+            <Button onClick={() => router.push("/admin/productos/agregar")}>
+              <Plus className="h-4 w-4 mr-2" />
+              Agregar producto
+            </Button>
           </div>
         )}
       </div>

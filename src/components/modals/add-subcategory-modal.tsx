@@ -30,6 +30,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "sonner"
 import { 
@@ -39,31 +40,39 @@ import {
   AlertTriangle,
   CheckCircle2
 } from "lucide-react"
+import { useBodegonSubcategories } from "@/hooks/use-bodegon-subcategories"
+import { useRestaurantSubcategories } from "@/hooks/use-restaurant-subcategories"
 import { useBodegonCategories } from "@/hooks/use-bodegon-categories"
 import { useRestaurantCategories } from "@/hooks/use-restaurant-categories"
 import { useRestaurants } from "@/hooks/use-restaurants"
 
-interface AddCategoryModalProps {
+interface AddSubcategoryModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
 }
 
-interface CategoryForm {
+interface SubcategoryForm {
   name: string
+  description: string
   type: "bodegon" | "restaurant" | ""
+  parent_category: string
   restaurant_id: string
   image: File | null
 }
 
-export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryModalProps) {
+export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcategoryModalProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
-  const { createCategory: createBodegonCategory, updateCategory: updateBodegonCategory } = useBodegonCategories()
-  const { createCategory: createRestaurantCategory, updateCategory: updateRestaurantCategory } = useRestaurantCategories()
+  const { createSubcategory: createBodegonSubcategory, updateSubcategory: updateBodegonSubcategory } = useBodegonSubcategories()
+  const { createSubcategory: createRestaurantSubcategory, updateSubcategory: updateRestaurantSubcategory } = useRestaurantSubcategories()
+  const { categories: bodegonCategories } = useBodegonCategories()
+  const { categories: restaurantCategories } = useRestaurantCategories()
   const { restaurants } = useRestaurants()
-  const [formData, setFormData] = useState<CategoryForm>({
+  const [formData, setFormData] = useState<SubcategoryForm>({
     name: "",
+    description: "",
     type: "",
+    parent_category: "",
     restaurant_id: "",
     image: null
   })
@@ -71,7 +80,7 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
 
-  const handleInputChange = (field: keyof CategoryForm, value: string) => {
+  const handleInputChange = (field: keyof SubcategoryForm, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -84,7 +93,17 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
     setFormData(prev => ({
       ...prev,
       type: value,
+      parent_category: "", // Reset category selection when type changes
       restaurant_id: "" // Reset restaurant selection when type changes
+    }))
+    setError("")
+    setSuccess(false)
+  }
+
+  const handleParentCategoryChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      parent_category: value
     }))
     setError("")
     setSuccess(false)
@@ -93,7 +112,8 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
   const handleRestaurantChange = (value: string) => {
     setFormData(prev => ({
       ...prev,
-      restaurant_id: value
+      restaurant_id: value,
+      parent_category: "" // Reset parent category when restaurant changes
     }))
     setError("")
     setSuccess(false)
@@ -111,7 +131,9 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
   const resetForm = () => {
     setFormData({
       name: "",
+      description: "",
       type: "",
+      parent_category: "",
       restaurant_id: "",
       image: null
     })
@@ -121,17 +143,22 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      setError("El nombre de la categoría es requerido")
+      setError("El nombre de la subcategoría es requerido")
       return
     }
 
     if (!formData.type) {
-      setError("El tipo de categoría es requerido")
+      setError("El tipo de subcategoría es requerido")
+      return
+    }
+
+    if (!formData.parent_category) {
+      setError("La categoría padre es requerida")
       return
     }
 
     if (formData.type === "restaurant" && !formData.restaurant_id) {
-      setError("El restaurante es requerido para categorías de restaurante")
+      setError("El restaurante es requerido para subcategorías de restaurante")
       return
     }
 
@@ -139,31 +166,37 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
     setError("")
 
     try {
-      // Create category using the appropriate hook based on type
-      const createCategory = formData.type === 'bodegon' ? createBodegonCategory : createRestaurantCategory
-      const updateCategory = formData.type === 'bodegon' ? updateBodegonCategory : updateRestaurantCategory
+      // Create subcategory using the appropriate hook based on type
+      const createSubcategory = formData.type === 'bodegon' ? createBodegonSubcategory : createRestaurantSubcategory
+      const updateSubcategory = formData.type === 'bodegon' ? updateBodegonSubcategory : updateRestaurantSubcategory
       
-      // Prepare category data based on type
-      const categoryData = {
+      // Prepare subcategory data based on type
+      const subcategoryData: any = {
         name: formData.name.trim(),
+        parent_category: formData.parent_category,
         is_active: true,
         image: null, // Will be updated after upload
-        ...(formData.type === "restaurant" && { restaurant_id: formData.restaurant_id })
+      }
+
+      // Add description for restaurant subcategories
+      if (formData.type === "restaurant") {
+        subcategoryData.description = formData.description.trim() || null
+        subcategoryData.restaurant_id = formData.restaurant_id
       }
       
-      const result = await createCategory(categoryData)
+      const result = await createSubcategory(subcategoryData)
 
       if (result.error) {
         throw new Error(result.error)
       }
 
-      // Upload image if provided and category was created successfully
+      // Upload image if provided and subcategory was created successfully
       if (formData.image && result.data) {
-        console.log('🔄 Starting image upload for category:', result.data.id)
+        console.log('🔄 Starting image upload for subcategory:', result.data.id)
         const uploadResult = await uploadFileToStorage(
           formData.image, 
-          'categories', 
-          `${formData.type}-category-${result.data.id}-${formData.name.replace(/\s+/g, '-').toLowerCase()}`
+          'subcategories', 
+          `${formData.type}-subcategory-${result.data.id}-${formData.name.replace(/\s+/g, '-').toLowerCase()}`
         )
 
         if (uploadResult.error) {
@@ -173,28 +206,28 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
           })
           // Continue without image - don't fail the entire operation
         } else if (uploadResult.url) {
-          console.log('✅ Image uploaded successfully, updating category with URL:', uploadResult.url)
+          console.log('✅ Image uploaded successfully, updating subcategory with URL:', uploadResult.url)
           
-          // Update category with image URL
-          const updateResult = await updateCategory(result.data.id, {
+          // Update subcategory with image URL
+          const updateResult = await updateSubcategory(result.data.id, {
             image: uploadResult.url
           })
           
           if (updateResult.error) {
-            console.error('❌ Failed to update category with image URL:', updateResult.error)
+            console.error('❌ Failed to update subcategory with image URL:', updateResult.error)
             toast.error("Error guardando imagen", {
               description: updateResult.error
             })
-            // Continue - category was created successfully even if image update failed
+            // Continue - subcategory was created successfully even if image update failed
           } else {
-            console.log('✅ Category updated with image URL successfully')
+            console.log('✅ Subcategory updated with image URL successfully')
           }
         }
       }
 
       // Show success toast
-      toast.success("¡Categoría creada exitosamente!", {
-        description: `${formData.name} ha sido agregada a las categorías ${formData.type === 'bodegon' ? 'de bodegón' : 'de restaurante'}.`
+      toast.success("¡Subcategoría creada exitosamente!", {
+        description: `${formData.name} ha sido agregada a las subcategorías ${formData.type === 'bodegon' ? 'de bodegón' : 'de restaurante'}.`
       })
 
       // Call success callback
@@ -205,9 +238,9 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
       onOpenChange(false)
 
     } catch (error: any) {
-      console.error('Error creating category:', error)
-      setError(error.message || 'Error al crear la categoría')
-      toast.error("Error al crear categoría", {
+      console.error('Error creating subcategory:', error)
+      setError(error.message || 'Error al crear la subcategoría')
+      toast.error("Error al crear subcategoría", {
         description: error.message || "Ocurrió un error inesperado"
       })
     } finally {
@@ -220,13 +253,22 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
     onOpenChange(false)
   }
 
+  // Get available categories based on type and restaurant selection
+  const availableCategories = formData.type === 'bodegon' 
+    ? bodegonCategories 
+    : restaurantCategories.filter(cat => 
+        formData.type === 'restaurant' && formData.restaurant_id 
+          ? cat.restaurant_id === formData.restaurant_id 
+          : true
+      )
+
   const renderFormContent = () => (
     <div className="space-y-4 py-4">
       <div className="space-y-2">
         <Label htmlFor="name">Nombre *</Label>
         <Input
           id="name"
-          placeholder="Ej: Platos Principales"
+          placeholder="Ej: Pizzas Tradicionales"
           value={formData.name}
           onChange={(e) => handleInputChange('name', e.target.value)}
           disabled={isLoading}
@@ -241,7 +283,7 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
           disabled={isLoading}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Selecciona el tipo de categoría" />
+            <SelectValue placeholder="Selecciona el tipo de subcategoría" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="bodegon">Bodegón</SelectItem>
@@ -272,8 +314,49 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
         </div>
       )}
 
+      {formData.type && (formData.type === 'bodegon' || (formData.type === 'restaurant' && formData.restaurant_id)) && (
+        <div className="space-y-2">
+          <Label htmlFor="parent_category">Categoría Padre *</Label>
+          <Select
+            value={formData.parent_category}
+            onValueChange={handleParentCategoryChange}
+            disabled={isLoading}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona la categoría padre" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableCategories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {formData.type === 'restaurant' && availableCategories.length === 0 && formData.restaurant_id && (
+            <p className="text-xs text-muted-foreground text-orange-600">
+              El restaurante seleccionado no tiene categorías. Primero debes crear categorías para este restaurante.
+            </p>
+          )}
+        </div>
+      )}
+
+      {formData.type === "restaurant" && (
+        <div className="space-y-2">
+          <Label htmlFor="description">Descripción</Label>
+          <Textarea
+            id="description"
+            placeholder="Descripción opcional de la subcategoría"
+            value={formData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            disabled={isLoading}
+            rows={3}
+          />
+        </div>
+      )}
+
       <div className="space-y-2">
-        <Label htmlFor="image">Imagen de Categoría</Label>
+        <Label htmlFor="image">Imagen de Subcategoría</Label>
         <div className="flex items-center gap-2">
           <Input
             id="image"
@@ -313,7 +396,7 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
         <Alert>
           <CheckCircle2 className="h-4 w-4" />
           <AlertDescription>
-            ¡Categoría creada exitosamente!
+            ¡Subcategoría creada exitosamente!
           </AlertDescription>
         </Alert>
       )}
@@ -327,10 +410,10 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Agregar Categoría
+              Agregar Subcategoría
             </DialogTitle>
             <DialogDescription>
-              Completa la información de la nueva categoría
+              Completa la información de la nueva subcategoría
             </DialogDescription>
           </DialogHeader>
 
@@ -353,7 +436,7 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
               {isLoading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : null}
-              Guardar Categoría
+              Guardar Subcategoría
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -367,10 +450,10 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
         <DrawerHeader className="text-left">
           <DrawerTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Agregar Categoría
+            Agregar Subcategoría
           </DrawerTitle>
           <DrawerDescription>
-            Completa la información de la nueva categoría
+            Completa la información de la nueva subcategoría
           </DrawerDescription>
         </DrawerHeader>
         
@@ -387,7 +470,7 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
             {isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : null}
-            Guardar Categoría
+            Guardar Subcategoría
           </Button>
           <DrawerClose asChild>
             <Button 
