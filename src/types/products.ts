@@ -18,6 +18,9 @@ export interface BodegonProduct {
   created_by?: string
   created_at?: string
   updated_at?: string
+  // Restaurant-specific fields (optional)
+  restaurant_id?: string
+  product_type?: 'bodegon' | 'restaurant'
 }
 
 export interface CreateBodegonProductData {

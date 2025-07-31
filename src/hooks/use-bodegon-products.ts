@@ -102,51 +102,147 @@ export function useBodegonProducts() {
       setLoading(true)
       setError(null)
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Check if Supabase is configured
+      const configured = isSupabaseConfigured()
+      
+      if (!configured || !supabase) {
+        // Use mock data if Supabase is not configured
+        await new Promise(resolve => setTimeout(resolve, 500))
 
-      let filteredProducts = [...mockProducts]
+        let filteredProducts = [...mockProducts]
+
+        // Apply filters to mock data
+        if (filters.search) {
+          const searchLower = filters.search.toLowerCase()
+          filteredProducts = filteredProducts.filter(p => 
+            p.name.toLowerCase().includes(searchLower) ||
+            p.description?.toLowerCase().includes(searchLower) ||
+            p.sku?.toLowerCase().includes(searchLower) ||
+            p.bar_code?.toLowerCase().includes(searchLower)
+          )
+        }
+
+        if (filters.category_id) {
+          filteredProducts = filteredProducts.filter(p => p.category_id === filters.category_id)
+        }
+
+        if (filters.is_active !== undefined) {
+          filteredProducts = filteredProducts.filter(p => p.is_active_product === filters.is_active)
+        }
+
+        // Apply pagination to mock data
+        const offset = (pagination.page - 1) * pagination.limit
+        const paginatedProducts = filteredProducts.slice(offset, offset + pagination.limit)
+        const totalPages = Math.ceil(filteredProducts.length / pagination.limit)
+
+        return {
+          products: paginatedProducts,
+          pagination: {
+            page: pagination.page,
+            limit: pagination.limit,
+            total: filteredProducts.length,
+            totalPages
+          }
+        }
+      }
+
+      // Build Supabase query
+      let query = supabase
+        .from('bodegon_products')
+        .select('*')
 
       // Apply filters
       if (filters.search) {
-        const searchLower = filters.search.toLowerCase()
-        filteredProducts = filteredProducts.filter(p => 
-          p.name.toLowerCase().includes(searchLower) ||
-          p.description?.toLowerCase().includes(searchLower) ||
-          p.sku?.toLowerCase().includes(searchLower) ||
-          p.bar_code?.toLowerCase().includes(searchLower)
-        )
+        query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%,sku.ilike.%${filters.search}%,bar_code.ilike.%${filters.search}%`)
       }
 
       if (filters.category_id) {
-        filteredProducts = filteredProducts.filter(p => p.category_id === filters.category_id)
+        query = query.eq('category_id', filters.category_id)
       }
 
       if (filters.subcategory_id) {
-        filteredProducts = filteredProducts.filter(p => p.subcategory_id === filters.subcategory_id)
+        query = query.eq('subcategory_id', filters.subcategory_id)
       }
 
       if (filters.is_active !== undefined) {
-        filteredProducts = filteredProducts.filter(p => p.is_active_product === filters.is_active)
+        query = query.eq('is_active_product', filters.is_active)
       }
 
       if (filters.is_discount !== undefined) {
-        filteredProducts = filteredProducts.filter(p => p.is_discount === filters.is_discount)
+        query = query.eq('is_discount', filters.is_discount)
       }
 
       if (filters.is_promo !== undefined) {
-        filteredProducts = filteredProducts.filter(p => p.is_promo === filters.is_promo)
+        query = query.eq('is_promo', filters.is_promo)
       }
 
       if (filters.price_min !== undefined) {
-        filteredProducts = filteredProducts.filter(p => p.price >= filters.price_min!)
+        query = query.gte('price', filters.price_min)
       }
 
       if (filters.price_max !== undefined) {
-        filteredProducts = filteredProducts.filter(p => p.price <= filters.price_max!)
+        query = query.lte('price', filters.price_max)
       }
 
       // Apply pagination
+      const from = (pagination.page - 1) * pagination.limit
+      const to = from + pagination.limit - 1
+
+      query = query
+        .order('created_date', { ascending: false })
+        .range(from, to)
+
+      const { data, error: queryError, count } = await query
+
+      if (queryError) {
+        console.error('Error fetching products:', queryError)
+        throw new Error(queryError.message)
+      }
+
+      // Map Supabase data to our interface
+      const mappedProducts: BodegonProduct[] = (data || []).map(item => ({
+        id: item.id,
+        name: item.name || '',
+        description: item.description || undefined,
+        image_gallery_urls: item.image_gallery_urls || [],
+        bar_code: item.bar_code || undefined,
+        sku: item.sku || undefined,
+        category_id: item.category_id || undefined,
+        subcategory_id: item.subcategory_id || undefined,
+        price: item.price || 0,
+        purchase_price: item.purchase_price || undefined,
+        quantity_in_pack: 1, // Default since we removed this field
+        is_active_product: item.is_active_product !== false,
+        is_discount: item.is_discount !== false,
+        is_promo: item.is_promo !== false,
+        created_by: item.created_by,
+        created_at: item.created_date,
+        updated_at: item.modified_date
+      }))
+
+      // Get total count for pagination
+      const { count: totalCount } = await supabase
+        .from('bodegon_products')
+        .select('*', { count: 'exact', head: true })
+
+      const total = totalCount || 0
+      const totalPages = Math.ceil(total / pagination.limit)
+
+      return {
+        products: mappedProducts,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total,
+          totalPages
+        }
+      }
+    } catch (err: any) {
+      console.error('Error getting products:', err)
+      setError(err.message || 'Error al obtener productos')
+      
+      // Fallback to mock data on error
+      let filteredProducts = [...mockProducts]
       const offset = (pagination.page - 1) * pagination.limit
       const paginatedProducts = filteredProducts.slice(offset, offset + pagination.limit)
       const totalPages = Math.ceil(filteredProducts.length / pagination.limit)
@@ -158,18 +254,6 @@ export function useBodegonProducts() {
           limit: pagination.limit,
           total: filteredProducts.length,
           totalPages
-        }
-      }
-    } catch (err: any) {
-      console.error('Error getting products:', err)
-      setError(err.message || 'Error al obtener productos')
-      return {
-        products: [],
-        pagination: {
-          page: pagination.page,
-          limit: pagination.limit,
-          total: 0,
-          totalPages: 0
         }
       }
     } finally {
@@ -466,14 +550,204 @@ export function useBodegonProducts() {
     return () => clearTimeout(timer)
   }, [])
 
+  // Crear producto de restaurante (implementación para restaurant_products)
+  const createRestaurantProduct = async (
+    productData: {
+      name: string
+      description?: string
+      image_gallery_urls?: string[]
+      price: number
+      restaurant_id: string
+      category_id?: string
+      subcategory_id?: string
+      is_available?: boolean
+    }
+  ): Promise<any | null> => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Check if Supabase is configured
+      const configured = isSupabaseConfigured()
+      
+      if (!configured || !supabase) {
+        throw new Error('Base de datos no configurada')
+      }
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        throw new Error('Usuario no autenticado')
+      }
+
+      const now = new Date()
+
+      // Create product in restaurant_products table
+      const { data: productResult, error: productError } = await supabase
+        .from('restaurant_products')
+        .insert({
+          name: productData.name.trim(),
+          description: productData.description?.trim() || null,
+          image_gallery_urls: productData.image_gallery_urls || [],
+          price: productData.price,
+          restaurant_id: productData.restaurant_id,
+          category_id: productData.category_id || null,
+          subcategory_id: productData.subcategory_id || null,
+          is_available: productData.is_available ?? true,
+          created_by: user.id,
+          created_date: now,
+          modified_date: now
+        })
+        .select()
+        .single()
+
+      if (productError) {
+        console.error('Error creating restaurant product:', productError)
+        throw new Error(productError.message)
+      }
+
+      console.log('✅ Restaurant product created successfully:', productResult)
+
+      return productResult
+    } catch (err: any) {
+      console.error('Error creating restaurant product:', err)
+      setError(err.message || 'Error al crear producto de restaurante')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Obtener productos de restaurante con paginación y filtros
+  const getRestaurantProducts = useCallback(async (
+    filters: { search?: string; restaurant_id?: string; category_id?: string } = {},
+    pagination: { page: number; limit: number } = { page: 1, limit: 25 }
+  ): Promise<ProductsResponse> => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Check if Supabase is configured
+      const configured = isSupabaseConfigured()
+      
+      if (!configured || !supabase) {
+        // Use mock data if Supabase is not configured
+        await new Promise(resolve => setTimeout(resolve, 500))
+        return {
+          products: [],
+          pagination: {
+            page: pagination.page,
+            limit: pagination.limit,
+            total: 0,
+            totalPages: 0
+          }
+        }
+      }
+
+      // Build Supabase query for restaurant products
+      let query = supabase
+        .from('restaurant_products')
+        .select('*')
+
+      // Apply filters
+      if (filters.search) {
+        query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+      }
+
+      if (filters.restaurant_id) {
+        query = query.eq('restaurant_id', filters.restaurant_id)
+      }
+
+      if (filters.category_id) {
+        query = query.eq('category_id', filters.category_id)
+      }
+
+      // Apply pagination
+      const from = (pagination.page - 1) * pagination.limit
+      const to = from + pagination.limit - 1
+
+      query = query
+        .order('created_date', { ascending: false })
+        .range(from, to)
+
+      const { data, error: queryError, count } = await query
+
+      if (queryError) {
+        console.error('Error fetching restaurant products:', queryError)
+        throw new Error(queryError.message)
+      }
+
+      // Map Supabase data to our interface (adapt restaurant products to BodegonProduct interface)
+      const mappedProducts: BodegonProduct[] = (data || []).map(item => ({
+        id: item.id,
+        name: item.name || '',
+        description: item.description || undefined,
+        image_gallery_urls: item.image_gallery_urls || [],
+        bar_code: undefined, // Restaurant products don't have bar_code
+        sku: undefined, // Restaurant products don't have SKU
+        category_id: item.category_id || undefined,
+        subcategory_id: item.subcategory_id || undefined,
+        price: item.price || 0,
+        purchase_price: undefined,
+        quantity_in_pack: 1,
+        is_active_product: item.is_available !== false,
+        is_discount: false,
+        is_promo: false,
+        created_by: item.created_by,
+        created_at: item.created_date,
+        updated_at: item.modified_date,
+        // Add restaurant-specific fields
+        restaurant_id: item.restaurant_id,
+        product_type: 'restaurant' as const
+      }))
+
+      // Get total count for pagination
+      const { count: totalCount } = await supabase
+        .from('restaurant_products')
+        .select('*', { count: 'exact', head: true })
+
+      const total = totalCount || 0
+      const totalPages = Math.ceil(total / pagination.limit)
+
+      return {
+        products: mappedProducts,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total,
+          totalPages
+        }
+      }
+    } catch (err: any) {
+      console.error('Error getting restaurant products:', err)
+      setError(err.message || 'Error al obtener productos de restaurante')
+      
+      // Fallback to empty data on error
+      return {
+        products: [],
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total: 0,
+          totalPages: 0
+        }
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   return {
     loading,
     error,
     formatPrice,
     getProducts,
+    getRestaurantProducts,
     getProductById,
     createProduct,
     createProductWithInventory,
+    createRestaurantProduct,
     updateProduct,
     deleteProduct,
     toggleProductActive,

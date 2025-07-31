@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { ImageUploadResult } from "@/types/products"
+import { uploadFileToStorage } from "@/lib/storage"
 
 export function useProductImages() {
   const [uploading, setUploading] = useState(false)
@@ -31,7 +32,7 @@ export function useProductImages() {
     return `${timestamp}-${random}.${extension}`
   }
 
-  // Subir una imagen (mock implementation)
+  // Subir una imagen usando Supabase Storage
   const uploadImage = async (file: File, folder: string = 'general'): Promise<ImageUploadResult> => {
     try {
       setUploading(true)
@@ -43,15 +44,20 @@ export function useProductImages() {
         throw new Error(validationError)
       }
 
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Mock implementation - generate a fake URL
+      // Usar la función real de Supabase Storage
       const fileName = generateFileName(file.name)
-      const mockUrl = `https://via.placeholder.com/400x300?text=${encodeURIComponent(fileName)}`
+      const result = await uploadFileToStorage(file, folder, fileName.split('.')[0])
+
+      if (result.error) {
+        throw new Error(result.error)
+      }
+
+      if (!result.url) {
+        throw new Error('No se pudo obtener la URL de la imagen')
+      }
 
       return {
-        url: mockUrl,
+        url: result.url,
         path: `${folder}/${fileName}`
       }
     } catch (err: any) {
@@ -91,16 +97,21 @@ export function useProductImages() {
     }
   }
 
-  // Eliminar imagen (mock implementation)
+  // Eliminar imagen usando Supabase Storage
   const deleteImage = async (filePath: string): Promise<boolean> => {
     try {
       setUploading(true)
       setError(null)
 
-      // Simulate delete delay
-      await new Promise(resolve => setTimeout(resolve, 300))
+      // Usar la función real de Supabase Storage para eliminar
+      const { deleteFileFromStorage } = await import('@/lib/storage')
+      const result = await deleteFileFromStorage(filePath)
 
-      return true
+      if (result.error) {
+        throw new Error(result.error)
+      }
+
+      return result.success
     } catch (err: any) {
       console.error('Error deleting image:', err)
       setError(err.message || 'Error al eliminar imagen')
@@ -129,11 +140,19 @@ export function useProductImages() {
     }
   }
 
-  // Obtener URL pública de una imagen (mock implementation)
+  // Obtener URL pública de una imagen
   const getPublicUrl = (filePath: string): string => {
     try {
-      // Mock implementation - return placeholder URL
-      return `https://via.placeholder.com/400x300?text=${encodeURIComponent(filePath)}`
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const bucket = process.env.NEXT_PUBLIC_AWS_S3_BUCKET || 'adminapp'
+      
+      if (!supabaseUrl) {
+        console.error('Supabase URL not configured')
+        return ''
+      }
+      
+      const projectId = supabaseUrl.split('//')[1].split('.')[0]
+      return `https://${projectId}.supabase.co/storage/v1/object/public/${bucket}/${filePath}`
     } catch (err) {
       console.error('Error getting public URL:', err)
       return ''
@@ -143,10 +162,18 @@ export function useProductImages() {
   // Extraer path del archivo desde una URL completa
   const extractPathFromUrl = (url: string): string => {
     try {
-      // Mock implementation - extract from placeholder URL
+      // Extraer el path desde una URL de Supabase Storage
+      const bucket = process.env.NEXT_PUBLIC_AWS_S3_BUCKET || 'adminapp'
       const urlObj = new URL(url)
-      const textParam = urlObj.searchParams.get('text')
-      return textParam || ''
+      const pathname = urlObj.pathname
+      
+      // El formato es: /storage/v1/object/public/{bucket}/{path}
+      const publicPrefix = `/storage/v1/object/public/${bucket}/`
+      if (pathname.startsWith(publicPrefix)) {
+        return pathname.substring(publicPrefix.length)
+      }
+      
+      return ''
     } catch (err) {
       console.error('Error extracting path from URL:', err)
       return ''

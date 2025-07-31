@@ -42,7 +42,7 @@ export default function AgregarProductoPage() {
   const router = useRouter()
   const { restaurants, loading: restaurantsLoading } = useRestaurants()
   const { bodegones, loading: bodegonesLoading } = useBodegones()
-  const { createProductWithInventory, loading: creatingProduct, error: productError } = useBodegonProducts()
+  const { createProductWithInventory, createRestaurantProduct, loading: creatingProduct, error: productError } = useBodegonProducts()
   const { uploadMultipleImages, uploading: uploadingImages } = useProductImages()
   
   // Categories and subcategories hooks
@@ -219,11 +219,51 @@ export default function AgregarProductoPage() {
         const createdProduct = await createProductWithInventory(productData, selectedBodegones)
         
         if (createdProduct) {
-          toast.success("¡Producto creado exitosamente!")
+          toast.success("¡Producto de bodegón creado exitosamente!")
+          router.push("/admin/productos")
+        }
+      } else if (productType === "restaurant-product") {
+        // Validar que se haya seleccionado un restaurante
+        if (!selectedRestaurant) {
+          alert("Debe seleccionar un restaurante")
+          return
+        }
+
+        // Subir imágenes si las hay
+        let imageUrls: string[] = []
+        if (images.length > 0) {
+          toast.info("Subiendo imágenes...")
+          const uploadResults = await uploadMultipleImages(images, 'products')
+          
+          // Filtrar solo las imágenes que se subieron correctamente
+          imageUrls = uploadResults
+            .filter(result => result.url && !result.error)
+            .map(result => result.url)
+          
+          if (uploadResults.some(result => result.error)) {
+            toast.warning("Algunas imágenes no se pudieron subir")
+          }
+        }
+
+        const restaurantProductData = {
+          name: name.trim(),
+          description: description.trim() || undefined,
+          image_gallery_urls: imageUrls,
+          price: parseFloat(price),
+          restaurant_id: selectedRestaurant,
+          category_id: categoryId || undefined,
+          subcategory_id: subcategoryId || undefined,
+          is_available: inStock
+        }
+
+        const createdRestaurantProduct = await createRestaurantProduct(restaurantProductData)
+        
+        if (createdRestaurantProduct) {
+          toast.success("¡Producto de restaurante creado exitosamente!")
           router.push("/admin/productos")
         }
       } else {
-        toast.error("Creación de productos de restaurante no implementada aún")
+        toast.error("Tipo de producto no válido")
       }
     } catch (error) {
       console.error("Error creating product:", error)
