@@ -38,6 +38,7 @@ import {
   AlertTriangle,
   RefreshCw
 } from "lucide-react"
+import { DeleteProductModal } from "@/components/modals/delete-product-modal"
 
 import { useCategories } from "@/hooks/use-categories"
 import { useBodegonProducts } from "@/hooks/use-bodegon-products"
@@ -71,6 +72,8 @@ export function ProductList({
   const [pageSize, setPageSize] = useState(25)
   const [showFilters, setShowFilters] = useState(false)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<BodegonProduct | null>(null)
 
   // Hooks
   const { categories, subcategories, loadSubcategories } = useCategories('bodegon')
@@ -157,13 +160,19 @@ export function ProductList({
   }
 
   // Manejar eliminación
-  const handleDelete = async (product: BodegonProduct) => {
-    if (window.confirm(`¿Estás seguro de eliminar "${product.name}"?`)) {
-      const success = await deleteProduct(product.id)
-      if (success) {
-        loadProducts() // Recargar lista
-        onDeleteProduct?.(product)
-      }
+  const handleDelete = (product: BodegonProduct) => {
+    setSelectedProduct(product)
+    setShowDeleteModal(true)
+  }
+
+  // Confirmar eliminación
+  const handleDeleteConfirm = async (product: BodegonProduct) => {
+    const success = await deleteProduct(product.id)
+    if (success) {
+      loadProducts() // Recargar lista
+      onDeleteProduct?.(product)
+    } else {
+      throw new Error('Error al eliminar el producto')
     }
   }
 
@@ -571,6 +580,14 @@ export function ProductList({
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de eliminación */}
+      <DeleteProductModal 
+        open={showDeleteModal} 
+        onOpenChange={setShowDeleteModal}
+        product={selectedProduct}
+        onDelete={handleDeleteConfirm}
+      />
     </div>
   )
 }
