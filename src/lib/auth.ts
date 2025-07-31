@@ -158,9 +158,26 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     }
 
     // First check if we have a session in localStorage
-    const { data: { session } } = await supabase.auth.getSession()
-    console.log('getCurrentUser: Session check:', session ? 'session exists' : 'no session')
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    console.log('getCurrentUser: Session check:', session ? `session exists for ${session.user?.email}` : 'no session')
+    
+    if (sessionError) {
+      console.error('getCurrentUser: Session error:', sessionError)
+      return null
+    }
 
+    // If we have a session, use that user directly
+    if (session?.user) {
+      console.log('getCurrentUser: Using session user:', session.user.email)
+      return {
+        id: session.user.id,
+        email: session.user.email || '',
+        full_name: session.user.user_metadata?.full_name,
+        email_confirmed_at: session.user.email_confirmed_at
+      }
+    }
+
+    // Fallback to getUser if no session (shouldn't normally happen)
     const { data: { user }, error } = await supabase.auth.getUser()
     
     if (error) {
@@ -173,7 +190,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       return null
     }
 
-    console.log('getCurrentUser: User found:', user.email)
+    console.log('getCurrentUser: User found via getUser:', user.email)
     return {
       id: user.id,
       email: user.email || '',

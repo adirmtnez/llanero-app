@@ -20,10 +20,20 @@ export default function AdminLayout({
 
   useEffect(() => {
     console.log('AdminLayout: Component mounted')
+    
+    // Add a safety timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.log('AdminLayout: Loading timeout reached, forcing auth check')
+        router.push("/auth")
+      }
+    }, 10000) // 10 second timeout
+    
     return () => {
       console.log('AdminLayout: Component unmounted')
+      clearTimeout(timeout)
     }
-  }, [])
+  }, [loading, router])
 
   useEffect(() => {
     console.log('AdminLayout: Auth state effect:', { user: user?.email, loading })

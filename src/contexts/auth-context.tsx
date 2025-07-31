@@ -46,24 +46,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           console.log('AuthProvider: Initializing Supabase auth...')
           
-          // Listen to auth changes first (this will handle initial session)
+          // Get current session first to avoid delays
+          const currentUser = await getCurrentUser()
+          console.log('AuthProvider: Initial user check:', currentUser ? currentUser.email : 'no user')
+          
+          // Set initial state
+          setUser(currentUser)
+          setLoading(false)
+          
+          // Set up auth state listener for ongoing changes
           unsubscribe = onAuthStateChange((user) => {
             console.log('Auth state changed:', user ? user.email : 'logged out')
             setUser(user)
-            setLoading(false)
           })
           
-          // Get current user to initialize state immediately
-          console.log('AuthProvider: Getting current user...')
-          const currentUser = await getCurrentUser()
-          console.log('AuthProvider: Current user result:', currentUser ? currentUser.email : 'no user')
-          
-          if (currentUser) {
-            setUser(currentUser)
-          }
-          setLoading(false)
         } catch (error) {
           console.error('Error initializing auth:', error)
+          setUser(null)
           setLoading(false)
         }
       } else {
