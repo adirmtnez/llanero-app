@@ -88,6 +88,7 @@ export default function BodegonesPage() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingBodegon, setEditingBodegon] = useState<any>(null)
   const [deletingBodegon, setDeletingBodegon] = useState<any>(null)
   const [activeFilter, setActiveFilter] = useState("all")
@@ -325,7 +326,8 @@ export default function BodegonesPage() {
                               onClick={() => {
                                 const fullBodegon = mockBodegones.find(b => b.id === bodegon.id)
                                 if (fullBodegon) {
-                                  router.push(`/admin/bodegones/${bodegon.id}`)
+                                  setEditingBodegon(fullBodegon)
+                                  setIsEditModalOpen(true)
                                 }
                               }}
                             >
@@ -396,8 +398,9 @@ export default function BodegonesPage() {
         />
 
         <EditBodegonModal 
-          open={!!editingBodegon}
+          open={isEditModalOpen}
           onOpenChange={(open) => {
+            setIsEditModalOpen(open)
             if (!open) {
               setEditingBodegon(null)
             }
@@ -405,6 +408,8 @@ export default function BodegonesPage() {
           bodegon={editingBodegon}
           onSuccess={() => {
             refreshBodegones()
+            setIsEditModalOpen(false)
+            setEditingBodegon(null)
           }}
         />
 

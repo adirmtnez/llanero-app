@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useMediaQuery } from "@/hooks/use-media-query"
+import { uploadFileToStorage } from "@/lib/storage"
 import {
   Dialog,
   DialogContent,
@@ -9,11 +11,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { toast } from "sonner"
 import { 
   Store, 
   X, 
@@ -21,15 +33,7 @@ import {
   AlertTriangle,
   CheckCircle2
 } from "lucide-react"
-
-interface Bodegon {
-  id: string
-  name: string
-  address: string | null
-  phone_number: string
-  is_active: boolean
-  logo_url: string | null
-}
+import { useBodegones, Bodegon } from "@/hooks/use-bodegones"
 
 interface EditBodegonModalProps {
   open: boolean
@@ -39,93 +43,77 @@ interface EditBodegonModalProps {
 }
 
 interface BodegonForm {
-  nombre: string
-  direccion: string
-  telefono: string
-  status: string
-  logo: File | null
+  name: string
+  phone_number: string
+  logo_url: File | null
+  currentLogoUrl: string | null
+  is_active: boolean
 }
 
-export function EditBodegonModal({ 
-  open, 
-  onOpenChange, 
-  bodegon,
-  onSuccess 
-}: EditBodegonModalProps) {
+export function EditBodegonModal({ open, onOpenChange, bodegon, onSuccess }: EditBodegonModalProps) {
+  const isDesktop = useMediaQuery("(min-width: 768px)")
+  const { updateBodegon } = useBodegones()
   const [formData, setFormData] = useState<BodegonForm>({
-    nombre: "",
-    direccion: "",
-    telefono: "",
-    status: "activo",
-    logo: null
+    name: "",
+    phone_number: "",
+    logo_url: null,
+    currentLogoUrl: null,
+    is_active: true
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const [success, setSuccess] = useState(false)
 
-  // Cargar datos del bodegón cuando se abre el modal
+  // Initialize form data when bodegon changes
   useEffect(() => {
-    if (open && bodegon) {
-      console.log('Datos del bodegón recibidos en el modal:', bodegon)
-      console.log('Logo URL:', bodegon.logo_url)
-      
+    if (bodegon) {
       setFormData({
-        nombre: bodegon.name || "",
-        direccion: bodegon.address || "",
-        telefono: bodegon.phone_number || "",
-        status: bodegon.is_active !== false ? "activo" : "inactivo",
-        logo: null
+        name: bodegon.name,
+        phone_number: bodegon.phone_number,
+        logo_url: null,
+        currentLogoUrl: bodegon.logo_url || null,
+        is_active: bodegon.is_active !== false
       })
-      setError("")
-      setSuccess(false)
     }
-  }, [open, bodegon])
+  }, [bodegon])
 
-  const handleInputChange = (field: keyof BodegonForm, value: string) => {
+  const handleInputChange = (field: keyof BodegonForm, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
     setError("")
-    setSuccess(false)
   }
 
   const handleFileChange = (file: File | null) => {
     setFormData(prev => ({
       ...prev,
-      logo: file
+      logo_url: file
     }))
     setError("")
-    setSuccess(false)
   }
 
   const resetForm = () => {
     if (bodegon) {
       setFormData({
-        nombre: bodegon.name || "",
-        direccion: bodegon.address || "",
-        telefono: bodegon.phone_number || "",
-        status: bodegon.is_active !== false ? "activo" : "inactivo",
-        logo: null
+        name: bodegon.name,
+        phone_number: bodegon.phone_number,
+        logo_url: null,
+        currentLogoUrl: bodegon.logo_url || null,
+        is_active: bodegon.is_active !== false
       })
     }
     setError("")
-    setSuccess(false)
   }
 
   const handleSave = async () => {
+    if (!bodegon) return
 
-    if (!bodegon) {
-      setError("No se encontró el bodegón a editar")
-      return
-    }
-
-    if (!formData.nombre.trim()) {
+    if (!formData.name.trim()) {
       setError("El nombre del bodegón es requerido")
       return
     }
 
-    if (!formData.telefono.trim()) {
+    if (!formData.phone_number.trim()) {
       setError("El teléfono es requerido")
       return
     }
@@ -134,50 +122,57 @@ export function EditBodegonModal({
     setError("")
 
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Datos del bodegón a actualizar
-      const bodegonData = {
-        name: formData.nombre.trim(),
-        address: formData.direccion.trim() || null,
-        phone_number: formData.telefono.trim(),
-        is_active: formData.status === "activo",
-        logo_url: bodegon.logo_url
+      // Prepare update data
+      let updateData: any = {
+        name: formData.name.trim(),
+        phone_number: formData.phone_number.trim(),
+        is_active: formData.is_active,
       }
 
-      // Mock file upload
-      if (formData.logo) {
-        console.log('Mock: Uploading logo:', formData.logo.name)
-        bodegonData.logo_url = 'mock-logo-url'
-      }
+      // Handle logo upload if new logo is provided
+      if (formData.logo_url) {
+        console.log('🔄 Starting logo upload for bodegon:', bodegon.id)
+        const uploadResult = await uploadFileToStorage(
+          formData.logo_url, 
+          'bodegones', 
+          `bodegon-logo-${bodegon.id}-${formData.name.replace(/\s+/g, '-').toLowerCase()}`
+        )
 
-      // Mock database update
-      console.log('Mock: Updating bodegon with data:', bodegonData)
-
-      setSuccess(true)
-      setTimeout(() => {
-        resetForm()
-        onOpenChange(false)
-        if (onSuccess) {
-          onSuccess()
+        if (uploadResult.error) {
+          console.error('❌ Logo upload failed:', uploadResult.error)
+          toast.error("Error subiendo logo", {
+            description: uploadResult.error
+          })
+        } else if (uploadResult.url) {
+          console.log('✅ Logo uploaded successfully:', uploadResult.url)
+          updateData.logo_url = uploadResult.url
         }
-      }, 1500)
+      }
+
+      // Update bodegon
+      const result = await updateBodegon(bodegon.id, updateData)
+
+      if (result.error) {
+        throw new Error(result.error)
+      }
+
+      // Show success toast
+      toast.success("¡Bodegón actualizado exitosamente!", {
+        description: `${formData.name} ha sido actualizado.`
+      })
+
+      // Call success callback
+      onSuccess?.()
+      
+      // Close modal
+      onOpenChange(false)
 
     } catch (error: any) {
       console.error('Error updating bodegon:', error)
-      
-      let errorMessage = 'Error desconocido al actualizar el bodegón'
-      
-      if (error?.message) {
-        errorMessage = error.message
-      } else if (typeof error === 'string') {
-        errorMessage = error
-      } else if (error?.error_description) {
-        errorMessage = error.error_description
-      }
-      
-      setError(errorMessage)
+      setError(error.message || 'Error al actualizar el bodegón')
+      toast.error("Error al actualizar bodegón", {
+        description: error.message || "Ocurrió un error inesperado"
+      })
     } finally {
       setIsLoading(false)
     }
@@ -188,129 +183,159 @@ export function EditBodegonModal({
     onOpenChange(false)
   }
 
-  if (!bodegon) return null
+  const renderFormContent = () => (
+    <div className="space-y-4 py-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Nombre *</Label>
+        <Input
+          id="name"
+          placeholder="Ej: Bodegón Central"
+          value={formData.name}
+          onChange={(e) => handleInputChange('name', e.target.value)}
+          disabled={isLoading}
+        />
+      </div>
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Store className="h-5 w-5" />
-            Editar Bodegón
-          </DialogTitle>
-          <DialogDescription>
-            Actualiza la información de {bodegon.name}
-          </DialogDescription>
-        </DialogHeader>
+      <div className="space-y-2">
+        <Label htmlFor="phone_number">Teléfono *</Label>
+        <Input
+          id="phone_number"
+          placeholder="Ej: +1234567890"
+          value={formData.phone_number}
+          onChange={(e) => handleInputChange('phone_number', e.target.value)}
+          disabled={isLoading}
+        />
+      </div>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="nombre">Nombre *</Label>
-            <Input
-              id="nombre"
-              placeholder="Ej: Bodegón Central"
-              value={formData.nombre}
-              onChange={(e) => handleInputChange('nombre', e.target.value)}
-              disabled={isLoading}
+      <div className="flex items-center justify-between">
+        <Label htmlFor="is_active">Bodegón Activo</Label>
+        <Switch
+          id="is_active"
+          checked={formData.is_active}
+          onCheckedChange={(checked) => handleInputChange('is_active', checked)}
+          disabled={isLoading}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="logo_url">Logo del Bodegón</Label>
+        {formData.currentLogoUrl && !formData.logo_url && (
+          <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+            <img 
+              src={formData.currentLogoUrl} 
+              alt="Current logo"
+              className="w-10 h-10 object-cover rounded"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="direccion">Dirección</Label>
-            <Input
-              id="direccion"
-              placeholder="Ej: Av. Principal #123, Ciudad"
-              value={formData.direccion}
-              onChange={(e) => handleInputChange('direccion', e.target.value)}
+            <span className="text-xs text-muted-foreground flex-1">
+              Logo actual
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleInputChange('currentLogoUrl', "")}
               disabled={isLoading}
-            />
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="telefono">Teléfono *</Label>
-            <Input
-              id="telefono"
-              placeholder="Ej: +1234567890"
-              value={formData.telefono}
-              onChange={(e) => handleInputChange('telefono', e.target.value)}
+        )}
+        <div className="flex items-center gap-2">
+          <Input
+            id="logo_url"
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+            disabled={isLoading}
+            className="flex-1"
+          />
+          {formData.logo_url && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleFileChange(null)}
               disabled={isLoading}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="status">Estatus</Label>
-            <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)} disabled={isLoading}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="activo">Activo</SelectItem>
-                <SelectItem value="inactivo">Inactivo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="logo">Logo</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="logo"
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
-                disabled={isLoading}
-                className="flex-1"
-              />
-              {formData.logo && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleFileChange(null)}
-                  disabled={isLoading}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            {formData.logo && (
-              <p className="text-xs text-muted-foreground">
-                Archivo seleccionado: {formData.logo.name}
-              </p>
-            )}
-            {bodegon.logo_url && !formData.logo && (
-              <p className="text-xs text-muted-foreground">
-                Logo actual: <a href={bodegon.logo_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Ver imagen</a>
-              </p>
-            )}
-          </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {success && (
-            <Alert>
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription>
-                ¡Bodegón actualizado exitosamente!
-              </AlertDescription>
-            </Alert>
+            >
+              <X className="h-4 w-4" />
+            </Button>
           )}
         </div>
+        {formData.logo_url && (
+          <p className="text-xs text-muted-foreground">
+            Nuevo logo: {formData.logo_url.name}
+          </p>
+        )}
+      </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={isLoading}
-          >
-            Cancelar
-          </Button>
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+    </div>
+  )
+
+  if (isDesktop) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Store className="h-5 w-5" />
+              Editar Bodegón
+            </DialogTitle>
+            <DialogDescription>
+              Modifica la información del bodegón
+            </DialogDescription>
+          </DialogHeader>
+
+          {renderFormContent()}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isLoading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
+              Guardar Cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <DrawerHeader className="text-left">
+          <DrawerTitle className="flex items-center gap-2">
+            <Store className="h-5 w-5" />
+            Editar Bodegón
+          </DrawerTitle>
+          <DrawerDescription>
+            Modifica la información del bodegón
+          </DrawerDescription>
+        </DrawerHeader>
+        
+        <div className="px-4 pb-4">
+          {renderFormContent()}
+        </div>
+        
+        <DrawerFooter>
           <Button
             type="button"
             onClick={handleSave}
@@ -319,10 +344,19 @@ export function EditBodegonModal({
             {isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : null}
-            Actualizar Bodegón
+            Guardar Cambios
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DrawerClose asChild>
+            <Button 
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isLoading}
+            >
+              Cancelar
+            </Button>
+          </DrawerClose>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }

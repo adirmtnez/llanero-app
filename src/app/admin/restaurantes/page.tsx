@@ -94,6 +94,7 @@ export default function RestaurantesPage() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingRestaurant, setEditingRestaurant] = useState<any>(null)
   const [deletingRestaurant, setDeletingRestaurant] = useState<any>(null)
   const [activeFilter, setActiveFilter] = useState("all")
@@ -336,7 +337,8 @@ export default function RestaurantesPage() {
                               onClick={() => {
                                 const fullRestaurant = mockRestaurants.find(r => r.id === restaurante.id)
                                 if (fullRestaurant) {
-                                  router.push(`/admin/restaurantes/${restaurante.id}`)
+                                  setEditingRestaurant(fullRestaurant)
+                                  setIsEditModalOpen(true)
                                 }
                               }}
                             >
@@ -407,8 +409,9 @@ export default function RestaurantesPage() {
         />
 
         <EditRestaurantModal 
-          open={!!editingRestaurant}
+          open={isEditModalOpen}
           onOpenChange={(open) => {
+            setIsEditModalOpen(open)
             if (!open) {
               setEditingRestaurant(null)
             }
@@ -416,6 +419,8 @@ export default function RestaurantesPage() {
           restaurant={editingRestaurant}
           onSuccess={() => {
             refreshRestaurants()
+            setIsEditModalOpen(false)
+            setEditingRestaurant(null)
           }}
         />
 

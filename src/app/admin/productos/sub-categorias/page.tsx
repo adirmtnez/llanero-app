@@ -42,66 +42,107 @@ import {
 import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
-
-const demoSubCategories = [
-  {
-    id: "1",
-    name: "Salsas Picantes",
-    parentCategory: "Salsas",
-    productCount: 8,
-    status: "Visible",
-  },
-  {
-    id: "2", 
-    name: "Salsas Dulces",
-    parentCategory: "Salsas",
-    productCount: 3,
-    status: "Visible",
-  },
-  {
-    id: "3",
-    name: "Hamburguesas",
-    parentCategory: "Platos Principales",
-    productCount: 12,
-    status: "Visible",
-  },
-  {
-    id: "4",
-    name: "Pizzas",
-    parentCategory: "Platos Principales",
-    productCount: 15,
-    status: "Visible",
-  },
-  {
-    id: "5",
-    name: "Tacos",
-    parentCategory: "Platos Principales",
-    productCount: 8,
-    status: "Oculta",
-  },
-  {
-    id: "6",
-    name: "Combos Familiares",
-    parentCategory: "Familia",
-    productCount: 4,
-    status: "Visible",
-  },
-]
+import { toast } from "sonner"
+import { AddSubcategoryModal } from "@/components/modals/add-subcategory-modal"
+import { EditSubcategoryModal } from "@/components/modals/edit-subcategory-modal"
+import { DeleteSubcategoryModal } from "@/components/modals/delete-subcategory-modal"
+import { useBodegonSubcategories, BodegonSubcategory } from "@/hooks/use-bodegon-subcategories"
+import { useRestaurantSubcategories, RestaurantSubcategory } from "@/hooks/use-restaurant-subcategories"
+import { useBodegonCategories } from "@/hooks/use-bodegon-categories"
+import { useRestaurantCategories } from "@/hooks/use-restaurant-categories"
+import { useRestaurants } from "@/hooks/use-restaurants"
 
 export default function SubCategoriasPage() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [loading, setLoading] = useState(true)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [selectedSubcategory, setSelectedSubcategory] = useState<(BodegonSubcategory & { subcategoryType: 'bodegon' }) | (RestaurantSubcategory & { subcategoryType: 'restaurant' }) | null>(null)
+  const [activeTab, setActiveTab] = useState("all")
   
-  // Simulate loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 800)
-    return () => clearTimeout(timer)
-  }, [])
+  const { subcategories: bodegonSubcategories, loading: bodegonLoading, refreshSubcategories: refreshBodegonSubcategories, updateSubcategory: updateBodegonSubcategory } = useBodegonSubcategories()
+  const { subcategories: restaurantSubcategories, loading: restaurantLoading, refreshSubcategories: refreshRestaurantSubcategories, updateSubcategory: updateRestaurantSubcategory } = useRestaurantSubcategories()
+  const { categories: bodegonCategories } = useBodegonCategories()
+  const { categories: restaurantCategories } = useRestaurantCategories()
+  const { restaurants } = useRestaurants()
   
-  const subCategories = demoSubCategories
+  // Helper function to get category name by ID
+  const getCategoryName = (categoryId: string, type: 'bodegon' | 'restaurant') => {
+    const categories = type === 'bodegon' ? bodegonCategories : restaurantCategories
+    const category = categories.find(c => c.id === categoryId)
+    return category ? category.name : 'N/A'
+  }
+  
+  // Helper function to get restaurant name by ID
+  const getRestaurantName = (restaurantId: string) => {
+    const restaurant = restaurants.find(r => r.id === restaurantId)
+    return restaurant ? restaurant.name : 'N/A'
+  }
+  
+  // Combine subcategories with type information
+  const allSubcategories = [
+    ...bodegonSubcategories.map(sub => ({ ...sub, subcategoryType: 'bodegon' as const })),
+    ...restaurantSubcategories.map(sub => ({ ...sub, subcategoryType: 'restaurant' as const }))
+  ]
+  
+  // Filter subcategories based on active tab
+  const filteredSubcategories = allSubcategories.filter(subcategory => {
+    if (activeTab === 'all') return true
+    if (activeTab === 'bodegon') return subcategory.subcategoryType === 'bodegon'
+    if (activeTab === 'restaurant') return subcategory.subcategoryType === 'restaurant'
+    if (activeTab === 'visible') return subcategory.is_active
+    if (activeTab === 'hidden') return !subcategory.is_active
+    return true
+  })
+  
+  const loading = bodegonLoading || restaurantLoading
+  const subCategories = filteredSubcategories
+
+  // Helper functions for subcategory actions
+  const handleEditSubcategory = (subcategory: (BodegonSubcategory & { subcategoryType: 'bodegon' }) | (RestaurantSubcategory & { subcategoryType: 'restaurant' })) => {
+    setSelectedSubcategory(subcategory)
+    setShowEditModal(true)
+  }
+
+  const handleDeleteSubcategory = (subcategory: (BodegonSubcategory & { subcategoryType: 'bodegon' }) | (RestaurantSubcategory & { subcategoryType: 'restaurant' })) => {
+    setSelectedSubcategory(subcategory)
+    setShowDeleteModal(true)
+  }
+
+  const handleToggleActive = async (subcategory: (BodegonSubcategory & { subcategoryType: 'bodegon' }) | (RestaurantSubcategory & { subcategoryType: 'restaurant' })) => {
+    try {
+      const updateSubcategory = subcategory.subcategoryType === 'bodegon' ? updateBodegonSubcategory : updateRestaurantSubcategory
+      const result = await updateSubcategory(subcategory.id, {
+        is_active: !subcategory.is_active
+      })
+
+      if (result.error) {
+        throw new Error(result.error)
+      }
+
+      toast.success(
+        subcategory.is_active 
+          ? "Subcategoría desactivada exitosamente" 
+          : "Subcategoría activada exitosamente"
+      )
+
+      // Refresh data
+      refreshBodegonSubcategories()
+      refreshRestaurantSubcategories()
+    } catch (error: any) {
+      console.error('Error toggling subcategory status:', error)
+      toast.error("Error al cambiar estado", {
+        description: error.message || "Ocurrió un error inesperado"
+      })
+    }
+  }
+
+  const handleModalSuccess = () => {
+    refreshBodegonSubcategories()
+    refreshRestaurantSubcategories()
+    setSelectedSubcategory(null)
+  }
 
   return (
     <>
@@ -171,9 +212,13 @@ export default function SubCategoriasPage() {
                 <DropdownMenuItem>Eliminar seleccionados</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm" className="flex-1 sm:flex-none justify-center">
+            <Button 
+              size="sm" 
+              className="flex-1 sm:flex-none justify-center"
+              onClick={() => setShowAddModal(true)}
+            >
               <Plus className="h-4 w-4 mr-2" />
-              <span className="hidden xs:inline">Agregar sub categoría</span>
+              <span className="hidden xs:inline">Agregar subcategoría</span>
               <span className="xs:hidden">Agregar</span>
             </Button>
           </div>
@@ -181,12 +226,13 @@ export default function SubCategoriasPage() {
 
         {/* Filter tabs */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <Tabs defaultValue="all" className="w-auto overflow-x-auto">
-            <TabsList className="grid w-full grid-cols-5 sm:w-auto sm:flex">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto overflow-x-auto">
+            <TabsList className="grid w-full grid-cols-6 sm:w-auto sm:flex">
               <TabsTrigger value="all">Todas</TabsTrigger>
-              <TabsTrigger value="visible">Visibles</TabsTrigger>
-              <TabsTrigger value="hidden">Ocultas</TabsTrigger>
-              <TabsTrigger value="archived" className="text-xs sm:text-sm">Archivadas</TabsTrigger>
+              <TabsTrigger value="bodegon">Bodegón</TabsTrigger>
+              <TabsTrigger value="restaurant">Restaurante</TabsTrigger>
+              <TabsTrigger value="visible">Activas</TabsTrigger>
+              <TabsTrigger value="hidden">Inactivas</TabsTrigger>
               <TabsTrigger value="add" className="text-muted-foreground">
                 <Plus className="h-4 w-4" />
               </TabsTrigger>
@@ -248,7 +294,9 @@ export default function SubCategoriasPage() {
                       <Checkbox />
                     </TableHead>
                     <TableHead className="min-w-[180px]">Nombre</TableHead>
+                    <TableHead className="min-w-[100px]">Tipo</TableHead>
                     <TableHead className="min-w-[150px]">Categoría</TableHead>
+                    <TableHead className="min-w-[150px]">Restaurante</TableHead>
                     <TableHead className="min-w-[120px]">Productos</TableHead>
                     <TableHead className="min-w-[100px]">Estatus</TableHead>
                     <TableHead className="w-12"></TableHead>
@@ -262,27 +310,58 @@ export default function SubCategoriasPage() {
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
-                            <div className="w-4 h-4 sm:w-6 sm:h-6 bg-muted-foreground/20 rounded"></div>
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {subCategory.image ? (
+                              <img 
+                                src={subCategory.image} 
+                                alt={subCategory.name}
+                                className="w-full h-full object-cover rounded"
+                              />
+                            ) : (
+                              <Package className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                            )}
                           </div>
                           <span className="truncate">{subCategory.name}</span>
                         </div>
                       </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="outline"
+                          className={subCategory.subcategoryType === 'bodegon' 
+                            ? "bg-blue-50 text-blue-700 border-blue-200" 
+                            : "bg-orange-50 text-orange-700 border-orange-200"
+                          }
+                        >
+                          {subCategory.subcategoryType === 'bodegon' ? 'Bodegón' : 'Restaurante'}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
-                        <span className="truncate block">{subCategory.parentCategory}</span>
+                        <span className="truncate block">{getCategoryName(subCategory.parent_category, subCategory.subcategoryType)}</span>
+                      </TableCell>
+                      <TableCell>
+                        {subCategory.subcategoryType === 'restaurant' && 'restaurant_id' in subCategory ? (
+                          <span className="text-sm text-muted-foreground">
+                            {getRestaurantName(subCategory.restaurant_id)}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Package className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{subCategory.productCount}</span>
+                          <span className="font-medium">0</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          variant={subCategory.status === "Visible" ? "default" : "secondary"}
-                          className={subCategory.status === "Visible" ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
+                          variant="default"
+                          className={subCategory.is_active 
+                            ? "bg-green-100 text-green-800 hover:bg-green-100" 
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-100"
+                          }
                         >
-                          {subCategory.status}
+                          {subCategory.is_active ? "Activa" : "Inactiva"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -293,12 +372,16 @@ export default function SubCategoriasPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Editar</DropdownMenuItem>
-                            <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                            <DropdownMenuItem>
-                              {subCategory.status === "Visible" ? "Ocultar" : "Mostrar"}
+                            <DropdownMenuItem onClick={() => handleEditSubcategory(subCategory)}>
+                              Editar
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem onClick={() => handleToggleActive(subCategory)}>
+                              {subCategory.is_active ? "Desactivar" : "Activar"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeleteSubcategory(subCategory)}
+                            >
                               Eliminar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -323,12 +406,41 @@ export default function SubCategoriasPage() {
                 Las sub categorías se muestran desde datos mock locales
               </p>
             </div>
-            <Button>
+            <Button onClick={() => setShowAddModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Agregar sub categoría
+              Agregar subcategoría
             </Button>
           </div>
         )}
+
+        {/* Add Subcategory Modal */}
+        <AddSubcategoryModal 
+          open={showAddModal}
+          onOpenChange={setShowAddModal}
+          onSuccess={handleModalSuccess}
+        />
+
+        {/* Edit Subcategory Modal */}
+        <EditSubcategoryModal 
+          open={showEditModal}
+          onOpenChange={(open) => {
+            setShowEditModal(open)
+            if (!open) setSelectedSubcategory(null)
+          }}
+          subcategory={selectedSubcategory}
+          onSuccess={handleModalSuccess}
+        />
+
+        {/* Delete Subcategory Modal */}
+        <DeleteSubcategoryModal 
+          open={showDeleteModal}
+          onOpenChange={(open) => {
+            setShowDeleteModal(open)
+            if (!open) setSelectedSubcategory(null)
+          }}
+          subcategory={selectedSubcategory}
+          onSuccess={handleModalSuccess}
+        />
       </div>
     </>
   )
