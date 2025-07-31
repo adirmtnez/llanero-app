@@ -377,33 +377,29 @@ export default function ProductosPage() {
             </div>
           </div>
         ) : (
-          <div className="border rounded-lg bg-white overflow-hidden">
-            <div className="flex flex-col items-center justify-center space-y-6 py-16">
-              <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-                <Plus className="h-6 w-6 text-muted-foreground/50" />
-              </div>
-              <div className="text-center space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {searchQuery ? "No se encontraron productos" : "No tienes productos aún"}
-                </p>
-                {!searchQuery && (
-                  <p className="text-xs text-muted-foreground max-w-sm">
-                    Los productos se muestran desde datos mock locales
-                  </p>
-                )}
-                {searchQuery && (
-                  <p className="text-xs text-muted-foreground max-w-sm">
-                    Intenta con otros términos de búsqueda o agrega nuevos productos
-                  </p>
-                )}
-              </div>
-              <div className="pt-2">
-                <Button size="sm" onClick={() => router.push("/admin/productos/agregar")}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar producto
-                </Button>
-              </div>
+          <div className="flex flex-col items-center justify-center space-y-6 py-16">
+            <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
+              <Plus className="h-6 w-6 text-muted-foreground/50" />
             </div>
+            <div className="text-center space-y-3">
+              <p className="text-lg font-medium text-foreground">
+                {searchQuery ? "No se encontraron productos" : "No tienes productos aún"}
+              </p>
+              {!searchQuery && (
+                <p className="text-sm text-muted-foreground">
+                  Los productos se muestran desde datos mock locales
+                </p>
+              )}
+              {searchQuery && (
+                <p className="text-sm text-muted-foreground">
+                  Intenta con otros términos de búsqueda o agrega nuevos productos
+                </p>
+              )}
+            </div>
+            <Button onClick={() => router.push("/admin/productos/agregar")}>
+              <Plus className="h-4 w-4 mr-2" />
+              Agregar producto
+            </Button>
           </div>
         )}
       </div>

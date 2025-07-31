@@ -311,17 +311,22 @@ export default function SubCategoriasPage() {
             </div>
           </div>
         ) : (
-          <div className="border rounded-lg bg-white overflow-hidden">
-            <div className="flex flex-col items-center justify-center space-y-6 py-16">
+          <div className="flex flex-col items-center justify-center space-y-6 py-16">
             <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
               <Plus className="h-6 w-6 text-muted-foreground/50" />
             </div>
             <div className="text-center space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
-                No hay sub categorías que coincidan con los filtros
+              <p className="text-lg font-medium text-foreground">
+                No tienes sub categorías aún
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Las sub categorías se muestran desde datos mock locales
               </p>
             </div>
-            </div>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Agregar sub categoría
+            </Button>
           </div>
         )}
       </div>

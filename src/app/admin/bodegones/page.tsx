@@ -352,13 +352,12 @@ export default function BodegonesPage() {
             </div>
           </div>
         ) : (
-          <div className="border rounded-lg bg-white overflow-hidden">
-            <div className="flex flex-col items-center justify-center space-y-6 py-16">
+          <div className="flex flex-col items-center justify-center space-y-6 py-16">
             <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
               <Store className="h-6 w-6 text-muted-foreground/50" />
             </div>
             <div className="text-center space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
+              <p className="text-lg font-medium text-foreground">
                 {!isConfigured
                     ? "Los bodegones se muestran desde datos mock"
                     : activeFilter === "active"
@@ -369,28 +368,22 @@ export default function BodegonesPage() {
                 }
               </p>
               {!isConfigured && (
-                <p className="text-xs text-muted-foreground max-w-sm">
+                <p className="text-sm text-muted-foreground">
                   Los bodegones se muestran desde datos mock para demostración
                 </p>
               )}
               {isConfigured && (
-                <p className="text-xs text-muted-foreground max-w-sm">
+                <p className="text-sm text-muted-foreground">
                   Agrega bodegones para expandir tu red de distribución y llegar a más clientes
                 </p>
               )}
             </div>
             {isConfigured && (
-              <div className="pt-2">
-                <Button 
-                  size="sm"
-                  onClick={() => setIsAddModalOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar bodegón
-                </Button>
-              </div>
+              <Button onClick={() => setIsAddModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar bodegón
+              </Button>
             )}
-            </div>
           </div>
         )}
 

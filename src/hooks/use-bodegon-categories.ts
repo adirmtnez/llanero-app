@@ -3,61 +3,43 @@
 import { useState, useEffect, useCallback } from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
-export interface Bodegon {
+export interface BodegonCategory {
   id: string
   name: string
-  address: string | null
-  phone_number: string
+  image: string | null
   is_active: boolean
-  logo_url: string | null
   created_by?: string
-  created_at?: string
-  updated_at?: string
   created_date?: string
   modified_date?: string
 }
 
-const mockBodegones: Bodegon[] = [
+const mockCategories: BodegonCategory[] = [
   {
     id: "1",
-    name: "Bodegón Central",
-    address: "Av. Principal #123",
-    phone_number: "+1234567890",
+    name: "Salsas",
+    image: null,
     is_active: true,
-    logo_url: null
   },
   {
     id: "2", 
-    name: "Minimarket El Arepazo",
-    address: "Calle Segunda #456",
-    phone_number: "+1234567891",
+    name: "Familia",
+    image: null,
     is_active: true,
-    logo_url: null
   },
   {
     id: "3",
-    name: "Bodegón Los Hermanos",
-    address: "Carrera 10 #789",
-    phone_number: "+1234567892",
-    is_active: false,
-    logo_url: null
-  },
-  {
-    id: "4",
-    name: "Supermercado La Esquina",
-    address: "Plaza Central #101",
-    phone_number: "+1234567893",
+    name: "Platos Principales",
+    image: null,
     is_active: true,
-    logo_url: null
-  }
+  },
 ]
 
-export function useBodegones() {
-  const [bodegones, setBodegones] = useState<Bodegon[]>([])
+export function useBodegonCategories() {
+  const [categories, setCategories] = useState<BodegonCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchBodegones = useCallback(async () => {
+  const fetchCategories = useCallback(async () => {
     setLoading(true)
     setError(null)
 
@@ -68,13 +50,13 @@ export function useBodegones() {
       if (!configured || !supabase) {
         // Use mock data if Supabase is not configured
         await new Promise(resolve => setTimeout(resolve, 500))
-        setBodegones(mockBodegones)
+        setCategories(mockCategories)
         return
       }
 
       // Fetch from Supabase
       const { data, error: supabaseError } = await supabase
-        .from('bodegons')
+        .from('bodegon_categories')
         .select('*')
         .order('name', { ascending: true })
 
@@ -83,44 +65,41 @@ export function useBodegones() {
       }
 
       // Map Supabase data to our interface
-      const mappedBodegones: Bodegon[] = (data || []).map(item => ({
+      const mappedCategories: BodegonCategory[] = (data || []).map(item => ({
         id: item.id, // Keep as-is, don't convert
         name: item.name || '',
-        address: item.address || null,
-        phone_number: item.phone_number || '',
+        image: item.image || null,
         is_active: item.is_active !== false,
-        logo_url: item.logo_url || null,
+        created_by: item.created_by,
         created_date: item.created_date,
         modified_date: item.modified_date
       }))
 
-      setBodegones(mappedBodegones)
+      setCategories(mappedCategories)
     } catch (err: any) {
-      console.error('Error fetching bodegones:', err)
-      setError(err.message || 'Error al cargar bodegones')
+      console.error('Error fetching bodegon categories:', err)
+      setError(err.message || 'Error al cargar categorías')
       
       // Fallback to mock data on error
-      setBodegones(mockBodegones)
+      setCategories(mockCategories)
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // Load bodegones on component mount
+  // Load categories on component mount
   useEffect(() => {
-    fetchBodegones()
-  }, [fetchBodegones])
+    fetchCategories()
+  }, [fetchCategories])
 
-  const refreshBodegones = () => {
-    fetchBodegones()
+  const refreshCategories = () => {
+    fetchCategories()
   }
 
-  const createBodegon = async (bodegonData: {
+  const createCategory = async (categoryData: {
     name: string
-    address?: string | null
-    phone_number: string
+    image?: string | null
     is_active?: boolean
-    logo_url?: string | null
   }) => {
     setLoading(true)
     setError(null)
@@ -131,18 +110,16 @@ export function useBodegones() {
       if (!configured || !supabase) {
         // Mock creation
         const now = new Date().toISOString()
-        const newBodegon: Bodegon = {
-          ...bodegonData,
+        const newCategory: BodegonCategory = {
+          ...categoryData,
           id: Math.random().toString(),
-          is_active: bodegonData.is_active !== false,
+          is_active: categoryData.is_active !== false,
           created_by: "mock-user-id",
-          created_at: now,
-          updated_at: now,
           created_date: now,
           modified_date: now
         }
-        setBodegones(prev => [...prev, newBodegon])
-        return { data: newBodegon, error: null }
+        setCategories(prev => [...prev, newCategory])
+        return { data: newCategory, error: null }
       }
 
       // Get current user
@@ -155,9 +132,9 @@ export function useBodegones() {
       // Create in Supabase with created_by and timestamps
       const now = new Date()
       const { data, error: supabaseError } = await supabase
-        .from('bodegons')
+        .from('bodegon_categories')
         .insert({
-          ...bodegonData,
+          ...categoryData,
           created_by: user.id,
           created_date: now,
           modified_date: now
@@ -170,32 +147,28 @@ export function useBodegones() {
       }
 
       // Map to our interface
-      console.log('📝 Raw data from Supabase:', data)
-      console.log('📝 data.id:', data.id, 'Type:', typeof data.id)
+      console.log('📝 Raw category data from Supabase:', data)
+      console.log('📝 category data.id:', data.id, 'Type:', typeof data.id)
       
-      const newBodegon: Bodegon = {
+      const newCategory: BodegonCategory = {
         id: data.id, // Keep as-is, don't convert
         name: data.name || '',
-        address: data.address || null,
-        phone_number: data.phone_number || '',
+        image: data.image || null,
         is_active: data.is_active !== false,
-        logo_url: data.logo_url || null,
         created_by: data.created_by,
-        created_at: data.created_at,
-        updated_at: data.updated_at,
         created_date: data.created_date,
         modified_date: data.modified_date
       }
       
-      console.log('📝 Mapped bodegon:', newBodegon)
+      console.log('📝 Mapped category:', newCategory)
 
       // Update local state
-      setBodegones(prev => [...prev, newBodegon])
+      setCategories(prev => [...prev, newCategory])
       
-      return { data: newBodegon, error: null }
+      return { data: newCategory, error: null }
     } catch (err: any) {
-      console.error('Error creating bodegon:', err)
-      const errorMessage = err.message || 'Error al crear bodegón'
+      console.error('Error creating category:', err)
+      const errorMessage = err.message || 'Error al crear categoría'
       setError(errorMessage)
       return { data: null, error: errorMessage }
     } finally {
@@ -203,32 +176,30 @@ export function useBodegones() {
     }
   }
 
-  const updateBodegon = async (id: string, updates: {
+  const updateCategory = async (id: string, updates: {
     name?: string
-    address?: string | null
-    phone_number?: string
+    image?: string | null
     is_active?: boolean
-    logo_url?: string | null
   }) => {
-    console.log('🔄 updateBodegon called with:', { id, updates })
+    console.log('🔄 updateCategory called with:', { id, updates })
     
     try {
       const configured = isSupabaseConfigured()
       
       if (!configured || !supabase) {
-        console.log('📝 Using mock update for bodegon')
+        console.log('📝 Using mock update for category')
         // Mock update
-        setBodegones(prev => prev.map(bodegon => 
-          bodegon.id === id 
-            ? { ...bodegon, ...updates, modified_date: new Date().toISOString() }
-            : bodegon
+        setCategories(prev => prev.map(category => 
+          category.id === id 
+            ? { ...category, ...updates, modified_date: new Date().toISOString() }
+            : category
         ))
         return { success: true, error: null }
       }
 
-      console.log('🔄 Updating bodegon in Supabase with ID:', id, 'Type:', typeof id)
+      console.log('🔄 Updating category in Supabase with ID:', id, 'Type:', typeof id)
       const { data, error: supabaseError } = await supabase
-        .from('bodegons')
+        .from('bodegon_categories')
         .update({
           ...updates,
           modified_date: new Date()
@@ -238,41 +209,37 @@ export function useBodegones() {
         .single()
 
       if (supabaseError) {
-        console.error('❌ Supabase update error:', supabaseError)
+        console.error('❌ Supabase category update error:', supabaseError)
         throw new Error(supabaseError.message)
       }
 
-      console.log('✅ Supabase update successful:', data)
+      console.log('✅ Supabase category update successful:', data)
 
       // Update local state
-      setBodegones(prev => prev.map(bodegon => 
-        bodegon.id === id 
+      setCategories(prev => prev.map(category => 
+        category.id === id 
           ? {
               id: data.id,
               name: data.name || '',
-              address: data.address || null,
-              phone_number: data.phone_number || '',
+              image: data.image || null,
               is_active: data.is_active !== false,
-              logo_url: data.logo_url || null,
               created_by: data.created_by,
-              created_at: data.created_at,
-              updated_at: data.updated_at,
               created_date: data.created_date,
               modified_date: data.modified_date
             }
-          : bodegon
+          : category
       ))
       
       return { success: true, error: null }
     } catch (err: any) {
-      console.error('Error updating bodegon:', err)
-      const errorMessage = err.message || 'Error al actualizar bodegón'
+      console.error('Error updating category:', err)
+      const errorMessage = err.message || 'Error al actualizar categoría'
       setError(errorMessage)
       return { success: false, error: errorMessage }
     }
   }
 
-  const deleteBodegon = async (id: string) => {
+  const deleteCategory = async (id: string) => {
     setLoading(true)
     setError(null)
 
@@ -281,12 +248,12 @@ export function useBodegones() {
       
       if (!configured || !supabase) {
         // Mock deletion
-        setBodegones(prev => prev.filter(bodegon => bodegon.id !== id))
+        setCategories(prev => prev.filter(category => category.id !== id))
         return { success: true, error: null }
       }
 
       const { error: supabaseError } = await supabase
-        .from('bodegons')
+        .from('bodegon_categories')
         .delete()
         .eq('id', id)
 
@@ -295,12 +262,12 @@ export function useBodegones() {
       }
 
       // Update local state
-      setBodegones(prev => prev.filter(bodegon => bodegon.id !== id))
+      setCategories(prev => prev.filter(category => category.id !== id))
       
       return { success: true, error: null }
     } catch (err: any) {
-      console.error('Error deleting bodegon:', err)
-      const errorMessage = err.message || 'Error al eliminar bodegón'
+      console.error('Error deleting category:', err)
+      const errorMessage = err.message || 'Error al eliminar categoría'
       setError(errorMessage)
       return { success: false, error: errorMessage }
     } finally {
@@ -309,13 +276,13 @@ export function useBodegones() {
   }
 
   return {
-    bodegones,
+    categories,
     loading,
     error,
-    refreshBodegones,
-    createBodegon,
-    updateBodegon,
-    deleteBodegon,
+    refreshCategories,
+    createCategory,
+    updateCategory,
+    deleteCategory,
     isConfigured: isSupabaseConfigured()
   }
 }
