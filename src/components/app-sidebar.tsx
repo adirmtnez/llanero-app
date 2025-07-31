@@ -33,6 +33,30 @@ import {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { user } = useAuth()
+  
+  // Maintain user data persistence to avoid flashing during navigation
+  const [persistentUser, setPersistentUser] = React.useState({
+    name: "Adirson",
+    email: "adirsonmtnez@gmail.com",
+    avatar: "/avatars/admin.jpg",
+  })
+
+  // Update persistent user data when actual user data is available
+  React.useEffect(() => {
+    if (user?.email && user?.full_name) {
+      setPersistentUser({
+        name: user.full_name,
+        email: user.email,
+        avatar: "/avatars/admin.jpg",
+      })
+    } else if (user?.email) {
+      setPersistentUser({
+        name: user.email.split('@')[0],
+        email: user.email,
+        avatar: "/avatars/admin.jpg",
+      })
+    }
+  }, [user])
 
   // Function to check if a nav item is active
   const isNavItemActive = (itemUrl: string, hasItems?: boolean) => {
@@ -52,11 +76,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Dynamic data based on current pathname
   const data = {
-    user: {
-      name: user?.full_name || user?.email?.split('@')[0] || "Usuario",
-      email: user?.email || "usuario@llanero-app.com",
-      avatar: "/avatars/admin.jpg",
-    },
+    user: persistentUser,
     navMain: [
       {
         title: "Inicio",

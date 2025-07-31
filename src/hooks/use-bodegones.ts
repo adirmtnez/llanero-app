@@ -160,8 +160,11 @@ export function useBodegones() {
       }
 
       // Map to our interface
+      console.log('📝 Raw data from Supabase:', data)
+      console.log('📝 data.id:', data.id, 'Type:', typeof data.id)
+      
       const newBodegon: Bodegon = {
-        id: data.id.toString(),
+        id: data.id, // Keep as-is, don't convert
         name: data.name || '',
         address: data.address || null,
         phone_number: data.phone_number || '',
@@ -171,6 +174,8 @@ export function useBodegones() {
         created_at: data.created_at,
         updated_at: data.updated_at
       }
+      
+      console.log('📝 Mapped bodegon:', newBodegon)
 
       // Update local state
       setBodegones(prev => [...prev, newBodegon])
@@ -183,6 +188,70 @@ export function useBodegones() {
       return { data: null, error: errorMessage }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const updateBodegon = async (id: string, updates: {
+    name?: string
+    address?: string | null
+    phone_number?: string
+    is_active?: boolean
+    logo_url?: string | null
+  }) => {
+    console.log('🔄 updateBodegon called with:', { id, updates })
+    
+    try {
+      const configured = isSupabaseConfigured()
+      
+      if (!configured || !supabase) {
+        console.log('📝 Using mock update for bodegon')
+        // Mock update
+        setBodegones(prev => prev.map(bodegon => 
+          bodegon.id === id 
+            ? { ...bodegon, ...updates, updated_at: new Date().toISOString() }
+            : bodegon
+        ))
+        return { success: true, error: null }
+      }
+
+      console.log('🔄 Updating bodegon in Supabase with ID:', id, 'Type:', typeof id)
+      const { data, error: supabaseError } = await supabase
+        .from('bodegons')
+        .update(updates) // Remove updated_at since column doesn't exist
+        .eq('id', id) // Use as string since it's UUID
+        .select()
+        .single()
+
+      if (supabaseError) {
+        console.error('❌ Supabase update error:', supabaseError)
+        throw new Error(supabaseError.message)
+      }
+
+      console.log('✅ Supabase update successful:', data)
+
+      // Update local state
+      setBodegones(prev => prev.map(bodegon => 
+        bodegon.id === id 
+          ? {
+              id: data.id.toString(),
+              name: data.name || '',
+              address: data.address || null,
+              phone_number: data.phone_number || '',
+              is_active: data.is_active !== false,
+              logo_url: data.logo_url || null,
+              created_by: data.created_by,
+              created_at: data.created_at,
+              updated_at: data.updated_at
+            }
+          : bodegon
+      ))
+      
+      return { success: true, error: null }
+    } catch (err: any) {
+      console.error('Error updating bodegon:', err)
+      const errorMessage = err.message || 'Error al actualizar bodegón'
+      setError(errorMessage)
+      return { success: false, error: errorMessage }
     }
   }
 
@@ -228,6 +297,7 @@ export function useBodegones() {
     error,
     refreshBodegones,
     createBodegon,
+    updateBodegon,
     deleteBodegon,
     isConfigured: isSupabaseConfigured()
   }
