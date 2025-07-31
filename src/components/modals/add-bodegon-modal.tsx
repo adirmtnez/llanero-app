@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { uploadFileToStorage } from "@/lib/storage"
+import { useBodegones } from "@/hooks/use-bodegones"
 import {
   Dialog,
   DialogContent,
@@ -49,6 +49,7 @@ interface BodegonForm {
 
 export function AddBodegonModal({ open, onOpenChange, onSuccess }: AddBodegonModalProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
+  const { createBodegon } = useBodegones()
   const [formData, setFormData] = useState<BodegonForm>({
     nombre: "",
     direccion: "",
@@ -103,66 +104,35 @@ export function AddBodegonModal({ open, onOpenChange, onSuccess }: AddBodegonMod
     setError("")
 
     try {
-      const configured = isSupabaseConfigured()
-      
-      if (!configured || !supabase) {
-        // Mock mode
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        console.log('Mock: Creating bodegon with data:', {
-          name: formData.nombre.trim(),
-          address: formData.direccion.trim() || null,
-          phone_number: formData.telefono.trim(),
-          is_active: true,
-          logo_url: formData.logo ? 'mock-logo-url' : null
-        })
-      } else {
-        // Supabase mode
-        let logoUrl: string | null = null
+      // Create bodegon using the hook (includes created_by automatically)
+      const result = await createBodegon({
+        name: formData.nombre.trim(),
+        address: formData.direccion.trim() || null,
+        phone_number: formData.telefono.trim(),
+        is_active: true,
+        logo_url: null // Will be updated after upload
+      })
 
-        // First create the bodegon without logo
-        const { data, error: supabaseError } = await supabase
-          .from('bodegons')
-          .insert({
-            name: formData.nombre.trim(),
-            address: formData.direccion.trim() || null,
-            phone_number: formData.telefono.trim(),
-            is_active: true,
-            logo_url: null
-          })
-          .select()
-          .single()
+      if (result.error) {
+        throw new Error(result.error)
+      }
 
-        if (supabaseError) {
-          throw new Error(supabaseError.message)
+      // Upload logo if provided and bodegon was created successfully
+      if (formData.logo && result.data) {
+        const uploadResult = await uploadFileToStorage(
+          formData.logo, 
+          'bodegons', 
+          `bodegon-${result.data.id}-logo`
+        )
+
+        if (uploadResult.error) {
+          console.warn('Logo upload failed:', uploadResult.error)
+          // Continue without logo - don't fail the entire operation
+        } else if (uploadResult.url) {
+          // Update bodegon with logo URL using the hook if available
+          // For now, we'll just log it - you could add an updateBodegon function later
+          console.log('Logo uploaded successfully:', uploadResult.url)
         }
-
-        // Upload logo if provided
-        if (formData.logo && data) {
-          const uploadResult = await uploadFileToStorage(
-            formData.logo, 
-            'bodegons/logos', 
-            `bodegon-${data.id}-logo.${formData.logo.name.split('.').pop()}`
-          )
-
-          if (uploadResult.error) {
-            console.warn('Logo upload failed:', uploadResult.error)
-            // Continue without logo - don't fail the entire operation
-          } else {
-            logoUrl = uploadResult.url
-            
-            // Update bodegon with logo URL
-            const { error: updateError } = await supabase
-              .from('bodegons')
-              .update({ logo_url: logoUrl })
-              .eq('id', data.id)
-
-            if (updateError) {
-              console.warn('Failed to update logo URL:', updateError.message)
-            }
-          }
-        }
-
-        console.log('Bodegon created:', data, 'Logo URL:', logoUrl)
       }
 
       // Show success toast

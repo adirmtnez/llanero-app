@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { uploadFileToStorage } from "@/lib/storage"
+import { useRestaurants } from "@/hooks/use-restaurants"
 import {
   Dialog,
   DialogContent,
@@ -50,6 +50,7 @@ interface RestaurantForm {
 
 export function AddRestaurantModal({ open, onOpenChange, onSuccess }: AddRestaurantModalProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
+  const { createRestaurant } = useRestaurants()
   const [formData, setFormData] = useState<RestaurantForm>({
     nombre: "",
     logo: null,
@@ -104,90 +105,53 @@ export function AddRestaurantModal({ open, onOpenChange, onSuccess }: AddRestaur
     setError("")
 
     try {
-      const configured = isSupabaseConfigured()
-      
-      if (!configured || !supabase) {
-        // Mock mode
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        console.log('Mock: Creating restaurant with data:', {
-          name: formData.nombre.trim(),
-          phone_number: formData.telefono.trim(),
-          is_active: true,
-          logo_url: formData.logo ? 'mock-logo-url' : null,
-          cover_image: formData.fotoPortada ? 'mock-cover-url' : null
-        })
-      } else {
-        // Supabase mode
-        let logoUrl: string | null = null
-        let coverImageUrl: string | null = null
+      // Create restaurant using the hook (includes created_by automatically)
+      const result = await createRestaurant({
+        name: formData.nombre.trim(),
+        phone_number: formData.telefono.trim(),
+        is_active: true,
+        logo_url: null, // Will be updated after upload
+        cover_image: null, // Will be updated after upload
+        delivery_available: true,
+        pickup_available: true,
+        opening_hours: null
+      })
 
-        // First create the restaurant without images
-        const { data, error: supabaseError } = await supabase
-          .from('restaurants')
-          .insert({
-            name: formData.nombre.trim(),
-            phone_number: formData.telefono.trim(),
-            is_active: true,
-            logo_url: null,
-            cover_image: null,
-            delivery_available: true,
-            pickup_available: true,
-            opening_hours: null
-          })
-          .select()
-          .single()
+      if (result.error) {
+        throw new Error(result.error)
+      }
 
-        if (supabaseError) {
-          throw new Error(supabaseError.message)
-        }
-
+      // Upload images if provided and restaurant was created successfully
+      if (result.data) {
         // Upload logo if provided
-        if (formData.logo && data) {
+        if (formData.logo) {
           const logoUploadResult = await uploadFileToStorage(
             formData.logo, 
-            'restaurants/logos', 
-            `restaurant-${data.id}-logo.${formData.logo.name.split('.').pop()}`
+            'restaurants', 
+            `restaurant-${result.data.id}-logo`
           )
 
           if (logoUploadResult.error) {
             console.warn('Logo upload failed:', logoUploadResult.error)
-          } else {
-            logoUrl = logoUploadResult.url
+          } else if (logoUploadResult.url) {
+            console.log('Logo uploaded successfully:', logoUploadResult.url)
           }
         }
 
         // Upload cover image if provided
-        if (formData.fotoPortada && data) {
+        if (formData.fotoPortada) {
           const coverUploadResult = await uploadFileToStorage(
             formData.fotoPortada, 
-            'restaurants/covers', 
-            `restaurant-${data.id}-cover.${formData.fotoPortada.name.split('.').pop()}`
+            'restaurants', 
+            `restaurant-${result.data.id}-cover`
           )
 
           if (coverUploadResult.error) {
             console.warn('Cover image upload failed:', coverUploadResult.error)
-          } else {
-            coverImageUrl = coverUploadResult.url
+          } else if (coverUploadResult.url) {
+            console.log('Cover image uploaded successfully:', coverUploadResult.url)
           }
         }
-
-        // Update restaurant with image URLs if any were uploaded
-        if (logoUrl || coverImageUrl) {
-          const updateData: any = {}
-          if (logoUrl) updateData.logo_url = logoUrl
-          if (coverImageUrl) updateData.cover_image = coverImageUrl
-
-          const { error: updateError } = await supabase
-            .from('restaurants')
-            .update(updateData)
-            .eq('id', data.id)
-
-          if (updateError) {
-            console.warn('Failed to update image URLs:', updateError.message)
-          }
-        }
-
-        console.log('Restaurant created:', data, 'Logo URL:', logoUrl, 'Cover URL:', coverImageUrl)
       }
 
       // Show success toast

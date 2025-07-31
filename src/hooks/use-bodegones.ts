@@ -10,6 +10,9 @@ export interface Bodegon {
   phone_number: string
   is_active: boolean
   logo_url: string | null
+  created_by?: string
+  created_at?: string
+  updated_at?: string
 }
 
 const mockBodegones: Bodegon[] = [
@@ -108,11 +111,124 @@ export function useBodegones() {
     fetchBodegones()
   }
 
+  const createBodegon = async (bodegonData: {
+    name: string
+    address?: string | null
+    phone_number: string
+    is_active?: boolean
+    logo_url?: string | null
+  }) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const configured = isSupabaseConfigured()
+      
+      if (!configured || !supabase) {
+        // Mock creation
+        const newBodegon: Bodegon = {
+          ...bodegonData,
+          id: Math.random().toString(),
+          is_active: bodegonData.is_active !== false,
+          created_by: "mock-user-id",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+        setBodegones(prev => [...prev, newBodegon])
+        return { data: newBodegon, error: null }
+      }
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        throw new Error('Usuario no autenticado')
+      }
+
+      // Create in Supabase with created_by field
+      const { data, error: supabaseError } = await supabase
+        .from('bodegons')
+        .insert({
+          ...bodegonData,
+          created_by: user.id
+        })
+        .select()
+        .single()
+
+      if (supabaseError) {
+        throw new Error(supabaseError.message)
+      }
+
+      // Map to our interface
+      const newBodegon: Bodegon = {
+        id: data.id.toString(),
+        name: data.name || '',
+        address: data.address || null,
+        phone_number: data.phone_number || '',
+        is_active: data.is_active !== false,
+        logo_url: data.logo_url || null,
+        created_by: data.created_by,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      }
+
+      // Update local state
+      setBodegones(prev => [...prev, newBodegon])
+      
+      return { data: newBodegon, error: null }
+    } catch (err: any) {
+      console.error('Error creating bodegon:', err)
+      const errorMessage = err.message || 'Error al crear bodegón'
+      setError(errorMessage)
+      return { data: null, error: errorMessage }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deleteBodegon = async (id: string) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const configured = isSupabaseConfigured()
+      
+      if (!configured || !supabase) {
+        // Mock deletion
+        setBodegones(prev => prev.filter(bodegon => bodegon.id !== id))
+        return { success: true, error: null }
+      }
+
+      const { error: supabaseError } = await supabase
+        .from('bodegons')
+        .delete()
+        .eq('id', id)
+
+      if (supabaseError) {
+        throw new Error(supabaseError.message)
+      }
+
+      // Update local state
+      setBodegones(prev => prev.filter(bodegon => bodegon.id !== id))
+      
+      return { success: true, error: null }
+    } catch (err: any) {
+      console.error('Error deleting bodegon:', err)
+      const errorMessage = err.message || 'Error al eliminar bodegón'
+      setError(errorMessage)
+      return { success: false, error: errorMessage }
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return {
     bodegones,
     loading,
     error,
     refreshBodegones,
+    createBodegon,
+    deleteBodegon,
     isConfigured: isSupabaseConfigured()
   }
 }
