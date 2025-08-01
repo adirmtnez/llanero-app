@@ -69,6 +69,7 @@ export function useRestaurantCategories() {
       }
 
       // Map Supabase data to our interface
+      console.log('📂 Raw restaurant categories from Supabase:', data)
       const mappedCategories: RestaurantCategory[] = (data || []).map(item => ({
         id: item.id, // Keep as-is, don't convert
         name: item.name || '',
@@ -79,6 +80,14 @@ export function useRestaurantCategories() {
         created_date: item.created_date,
         modified_date: item.modified_date
       }))
+      
+      console.log('📂 Mapped restaurant categories:', mappedCategories.map(cat => ({
+        id: cat.id,
+        id_type: typeof cat.id,
+        name: cat.name,
+        restaurant_id: cat.restaurant_id,
+        restaurant_id_type: typeof cat.restaurant_id
+      })))
 
       setCategories(mappedCategories)
     } catch (err: any) {

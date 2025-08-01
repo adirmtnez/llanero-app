@@ -39,8 +39,8 @@ import {
   AlertTriangle,
   CheckCircle2
 } from "lucide-react"
-import { useBodegonCategories } from "@/hooks/use-bodegon-categories"
-import { useRestaurantCategories } from "@/hooks/use-restaurant-categories"
+import { useBodegonCategories } from "@/hooks/bodegones/use-bodegon-categories"
+import { useRestaurantCategories } from "@/hooks/restaurants/use-restaurant-categories"
 import { useRestaurants } from "@/hooks/use-restaurants"
 
 interface AddCategoryModalProps {

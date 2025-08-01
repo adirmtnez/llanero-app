@@ -71,7 +71,7 @@ export function RestaurantProductsGrid({ products, onProductDeleted, categories 
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {products.map((product) => {
           const productImage = getProductImage(product.raw)
           const categoryName = getCategoryName(product.raw.category_id)
@@ -115,7 +115,7 @@ export function RestaurantProductsGrid({ products, onProductDeleted, categories 
                         <Button 
                           variant="secondary" 
                           size="sm" 
-                          className="h-8 w-8 p-0 bg-white/90 hover:bg-white border-0 shadow-md"
+                          className="h-8 w-8 p-0 bg-white/90 hover:bg-white border-0 shadow-md cursor-pointer"
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>

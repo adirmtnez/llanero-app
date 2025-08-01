@@ -29,11 +29,11 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useRestaurants } from "@/hooks/use-restaurants"
 import { useBodegones } from "@/hooks/use-bodegones"
-import { useBodegonCategories } from "@/hooks/use-bodegon-categories"
-import { useRestaurantCategories } from "@/hooks/use-restaurant-categories"
-import { useBodegonSubcategories } from "@/hooks/use-bodegon-subcategories"
-import { useRestaurantSubcategories } from "@/hooks/use-restaurant-subcategories"
-import { useBodegonProducts } from "@/hooks/use-bodegon-products"
+import { useBodegonCategories } from "@/hooks/bodegones/use-bodegon-categories"
+import { useRestaurantCategories } from "@/hooks/restaurants/use-restaurant-categories"
+import { useBodegonSubcategories } from "@/hooks/bodegones/use-bodegon-subcategories"
+import { useRestaurantSubcategories } from "@/hooks/restaurants/use-restaurant-subcategories"
+import { useBodegonProducts } from "@/hooks/bodegones/use-bodegon-products"
 import { useProductImages } from "@/hooks/use-product-images"
 import { AddCategoryModal } from "@/components/modals/add-category-modal"
 import { toast } from "sonner"
@@ -158,17 +158,17 @@ export default function AgregarProductoPage() {
     
     // Validar campos requeridos
     if (!productType) {
-      alert("Debe seleccionar un tipo de producto")
+      toast.error("Debe seleccionar un tipo de producto")
       return
     }
     
     if (!name.trim()) {
-      alert("El nombre del producto es requerido")
+      toast.error("El nombre del producto es requerido")
       return
     }
     
     if (!price || parseFloat(price) <= 0) {
-      alert("El precio debe ser mayor a 0")
+      toast.error("El precio debe ser mayor a 0")
       return
     }
 
@@ -212,7 +212,7 @@ export default function AgregarProductoPage() {
         )
 
         if (selectedBodegones.length === 0) {
-          alert("Debe seleccionar al menos un bodegón donde el producto estará disponible")
+          toast.error("Debe seleccionar al menos un bodegón donde el producto estará disponible")
           return
         }
 
@@ -225,7 +225,7 @@ export default function AgregarProductoPage() {
       } else if (productType === "restaurant-product") {
         // Validar que se haya seleccionado un restaurante
         if (!selectedRestaurant) {
-          alert("Debe seleccionar un restaurante")
+          toast.error("Debe seleccionar un restaurante")
           return
         }
 
@@ -358,27 +358,29 @@ export default function AgregarProductoPage() {
                     />
                   </div>
 
-                  {/* SKU and Barcode */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="sku">SKU</Label>
-                      <Input
-                        id="sku"
-                        value={sku}
-                        onChange={(e) => setSku(e.target.value)}
-                        placeholder="SKU del producto"
-                      />
+                  {/* SKU and Barcode - Only show for Bodegon products */}
+                  {productType === "bodegon-product" && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="sku">SKU</Label>
+                        <Input
+                          id="sku"
+                          value={sku}
+                          onChange={(e) => setSku(e.target.value)}
+                          placeholder="SKU del producto"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="barcode">Código de barras</Label>
+                        <Input
+                          id="barcode"
+                          value={barcode}
+                          onChange={(e) => setBarcode(e.target.value)}
+                          placeholder="Código de barras"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="barcode">Código de barras</Label>
-                      <Input
-                        id="barcode"
-                        value={barcode}
-                        onChange={(e) => setBarcode(e.target.value)}
-                        placeholder="Código de barras"
-                      />
-                    </div>
-                  </div>
+                  )}
 
                   {/* Description */}
                   <div className="space-y-2">
@@ -454,10 +456,10 @@ export default function AgregarProductoPage() {
                                 type="button"
                                 variant="destructive"
                                 size="sm"
-                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                                className="absolute -top-2 -right-2 h-8 w-8 rounded-full p-0 bg-red-500 hover:bg-red-600 border-2 border-white shadow-lg"
                                 onClick={() => removeImage(index)}
                               >
-                                <X className="h-3 w-3" />
+                                <X className="h-4 w-4 text-white" />
                               </Button>
                             </>
                           ) : (

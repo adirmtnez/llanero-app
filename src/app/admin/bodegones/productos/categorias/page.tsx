@@ -37,113 +37,63 @@ import {
   Search,
   SlidersHorizontal,
   X,
-  CreditCard,
-  Building2
+  Package
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
-import { TableLoading } from "@/components/ui/table-loading"
+import { TableSkeleton } from "@/components/ui/table-skeleton"
+import { toast } from "sonner"
+import { AddCategoryModal } from "@/components/modals/add-category-modal"
+import { EditCategoryModal } from "@/components/modals/edit-category-modal"
+import { DeleteCategoryModal } from "@/components/modals/delete-category-modal"
+import { useBodegonCategories, BodegonCategory } from "@/hooks/bodegones/use-bodegon-categories"
 
-const demoPaymentMethods = [
-  {
-    id: "1",
-    bank: "Banco de Venezuela",
-    type: "Transferencia Bancaria",
-    account: "0102-****-****-5678",
-    status: "Activo",
-    establishment: "Pizza Express",
-    establishmentType: "restaurante",
-    category: "nacional",
-  },
-  {
-    id: "2", 
-    bank: "Banesco",
-    type: "Pago Móvil",
-    account: "0134-****-****-9012",
-    status: "Activo",
-    establishment: "Minimarket El Arepazo",
-    establishmentType: "bodegon",
-    category: "nacional",
-  },
-  {
-    id: "3",
-    bank: "BBVA Provincial",
-    type: "Punto de Venta",
-    account: "0108-****-****-3456",
-    status: "Inactivo",
-    establishment: "Supermercado La Esquina",
-    establishmentType: "bodegon",
-    category: "nacional",
-  },
-  {
-    id: "4",
-    bank: "PayPal",
-    type: "Transferencia Internacional",
-    account: "user@example.com",
-    status: "Activo",
-    establishment: "Café Central",
-    establishmentType: "restaurante",
-    category: "internacional",
-  },
-  {
-    id: "5",
-    bank: "Wise (TransferWise)",
-    type: "Transferencia Internacional",
-    account: "USD Account ****4567",
-    status: "Activo",
-    establishment: "Bodegón Los Hermanos",
-    establishmentType: "bodegon",
-    category: "internacional",
-  },
-  {
-    id: "6",
-    bank: "Mercado Pago",
-    type: "Billetera Digital",
-    account: "+58-414-****-789",
-    status: "Pendiente",
-    establishment: "Pollo Dorado",
-    establishmentType: "restaurante",
-    category: "nacional",
-  },
-]
-
-export default function MetodosPagoPage() {
+export default function BodegonCategoriasPage() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeFilter, setActiveFilter] = useState("all")
-  const [loading, setLoading] = useState(true)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<BodegonCategory | null>(null)
+  const [activeTab, setActiveTab] = useState("all")
   
-  // Simulate loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 800)
-    return () => clearTimeout(timer)
-  }, [])
+  const { categories: bodegonCategories, loading, refreshCategories, updateCategory } = useBodegonCategories()
   
-  const allPaymentMethods = demoPaymentMethods
-  
-  // Filter payment methods based on active filter
-  const paymentMethods = allPaymentMethods.filter(method => {
-    if (activeFilter === "all") return true
-    if (activeFilter === "nacional") return method.category === "nacional"
-    if (activeFilter === "internacional") return method.category === "internacional"
-    if (activeFilter === "active") return method.status === "Activo"
-    if (activeFilter === "pending") return method.status === "Pendiente"
-    if (activeFilter === "inactive") return method.status === "Inactivo"
-    return true
+  // Filter categories based on active tab and search
+  const filteredCategories = bodegonCategories.filter(category => {
+    const matchesSearch = searchQuery.trim() === "" || 
+      category.name.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesTab = 
+      activeTab === 'all' ||
+      (activeTab === 'visible' && category.is_active) ||
+      (activeTab === 'hidden' && !category.is_active)
+    
+    return matchesSearch && matchesTab
   })
+  
+  const categories = filteredCategories
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Activo":
-        return "bg-green-100 text-green-800 hover:bg-green-100"
-      case "Pendiente":
-        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
-      case "Inactivo":
-        return "bg-red-100 text-red-800 hover:bg-red-100"
-      default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100"
+  // Helper functions for category actions
+  const handleEditCategory = (category: BodegonCategory) => {
+    setSelectedCategory(category)
+    setShowEditModal(true)
+  }
+
+  const handleDeleteCategory = (category: BodegonCategory) => {
+    setSelectedCategory(category)
+    setShowDeleteModal(true)
+  }
+
+  const handleToggleVisibility = async (category: BodegonCategory) => {
+    const updatedCategory = { ...category, is_active: !category.is_active }
+    const result = await updateCategory(category.id, { is_active: !category.is_active })
+    
+    if (result.success) {
+      toast.success(`Categoría ${updatedCategory.is_active ? 'activada' : 'desactivada'} correctamente`)
+      refreshCategories()
+    } else {
+      toast.error(result.error || 'Error al actualizar categoría')
     }
   }
 
@@ -165,7 +115,19 @@ export default function MetodosPagoPage() {
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbPage>Métodos de pago</BreadcrumbPage>
+                <BreadcrumbLink href="/admin/bodegones">
+                  Bodegones
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin/bodegones/productos">
+                  Productos
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Categorías</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -176,7 +138,7 @@ export default function MetodosPagoPage() {
         {/* Header with title and actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">Métodos de pago</h1>
+            <h1 className="text-2xl font-bold">Categorías de Bodegón</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" className="hidden sm:flex">
@@ -206,42 +168,48 @@ export default function MetodosPagoPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem>Exportar seleccionados</DropdownMenuItem>
                 <DropdownMenuItem>Edición masiva</DropdownMenuItem>
-                <DropdownMenuItem>Desactivar seleccionados</DropdownMenuItem>
+                <DropdownMenuItem>Eliminar seleccionados</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm" className="flex-1 sm:flex-none justify-center">
+            <Button 
+              size="sm" 
+              className="flex-1 sm:flex-none justify-center"
+              onClick={() => setShowAddModal(true)}
+            >
               <Plus className="h-4 w-4 mr-2" />
-              <span className="hidden xs:inline">Agregar método</span>
+              <span className="hidden xs:inline">Agregar categoría</span>
               <span className="xs:hidden">Agregar</span>
             </Button>
           </div>
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <Tabs value={activeFilter} onValueChange={setActiveFilter} className="w-auto overflow-x-auto">
-            <TabsList className="grid w-full grid-cols-7 sm:w-auto sm:flex">
-              <TabsTrigger value="all">Todos</TabsTrigger>
-              <TabsTrigger value="nacional" className="text-xs sm:text-sm">Nacional</TabsTrigger>
-              <TabsTrigger value="internacional" className="text-xs sm:text-sm">Intl.</TabsTrigger>
-              <TabsTrigger value="active">Activos</TabsTrigger>
-              <TabsTrigger value="pending" className="text-xs sm:text-sm">Pend.</TabsTrigger>
-              <TabsTrigger value="inactive" className="text-xs sm:text-sm">Inact.</TabsTrigger>
-              <TabsTrigger value="add" className="text-muted-foreground">
-                <Plus className="h-4 w-4" />
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        {/* Filter tabs and Search */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto overflow-x-auto">
+              <TabsList className="grid w-full grid-cols-4 sm:w-auto sm:flex">
+                <TabsTrigger value="all">Todas</TabsTrigger>
+                <TabsTrigger value="visible">Visibles</TabsTrigger>
+                <TabsTrigger value="hidden">Ocultas</TabsTrigger>
+                <TabsTrigger value="add" className="text-muted-foreground">
+                  <Plus className="h-4 w-4" />
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          
+          {/* Search and Filter Actions */}
           <div className="flex items-center gap-2">
             {isSearchExpanded ? (
               <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-background w-full sm:min-w-[300px]">
-                <Search className="h-4 w-4 text-muted-foreground" />
+                <Search className={`h-4 w-4 ${loading ? 'animate-pulse' : ''} text-muted-foreground`} />
                 <Input
-                  placeholder="Buscar métodos de pago..."
+                  placeholder="Buscar categorías de bodegón..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="border-0 p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
                   autoFocus
+                  disabled={loading}
                 />
                 <Button 
                   variant="ghost" 
@@ -251,6 +219,7 @@ export default function MetodosPagoPage() {
                     setSearchQuery("")
                   }}
                   className="h-auto p-1"
+                  disabled={loading}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -270,15 +239,10 @@ export default function MetodosPagoPage() {
           </div>
         </div>
 
-        {/* Payment Methods table */}
+        {/* Categories table */}
         {loading ? (
-          <TableLoading 
-            rows={5} 
-            columns={4} 
-            showCheckbox={true} 
-            showActions={true}
-          />
-        ) : paymentMethods.length > 0 ? (
+          <TableSkeleton rows={5} columns={5} showCheckbox={true} showActions={true} />
+        ) : categories.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -287,49 +251,36 @@ export default function MetodosPagoPage() {
                     <TableHead className="w-12">
                       <Checkbox />
                     </TableHead>
-                    <TableHead className="min-w-[150px]">Banco</TableHead>
-                    <TableHead className="min-w-[140px]">Tipo de método</TableHead>
-                    <TableHead className="min-w-[140px]">Cuenta</TableHead>
-                    <TableHead className="min-w-[100px]">Estatus</TableHead>
-                    <TableHead className="min-w-[160px]">Bodegón/Restaurante</TableHead>
+                    <TableHead className="min-w-[200px]">Categoría</TableHead>
+                    <TableHead className="min-w-[100px]">Estado</TableHead>
+                    <TableHead className="min-w-[120px]">Fecha de creación</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paymentMethods.map((method) => (
-                    <TableRow key={method.id}>
+                  {categories.map((category) => (
+                    <TableRow key={category.id}>
                       <TableCell>
                         <Checkbox />
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
-                            <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                            <Package className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground" />
                           </div>
-                          <span className="truncate">{method.bank}</span>
+                          <span className="truncate">{category.name}</span>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        <span className="block truncate text-xs sm:text-sm">{method.type}</span>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs sm:text-sm">
-                        <span className="block truncate">{method.account}</span>
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          variant="default"
-                          className={getStatusColor(method.status)}
+                          variant={category.is_active ? "default" : "secondary"}
+                          className={category.is_active ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
                         >
-                          {method.status}
+                          {category.is_active ? "Visible" : "Oculta"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        <div className="flex flex-col">
-                          <span className="truncate">{method.establishment}</span>
-                          <span className="text-xs text-muted-foreground/60 capitalize">
-                            {method.establishmentType}
-                          </span>
-                        </div>
+                        {category.created_date ? new Date(category.created_date).toLocaleDateString() : "N/A"}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -339,12 +290,17 @@ export default function MetodosPagoPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Editar</DropdownMenuItem>
-                            <DropdownMenuItem>Ver detalles</DropdownMenuItem>
-                            <DropdownMenuItem>
-                              {method.status === "Activo" ? "Desactivar" : "Activar"}
+                            <DropdownMenuItem onClick={() => handleEditCategory(category)}>
+                              Editar
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem onClick={() => handleToggleVisibility(category)}>
+                              {category.is_active ? "Ocultar" : "Mostrar"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>Duplicar</DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeleteCategory(category)}
+                            >
                               Eliminar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -359,23 +315,51 @@ export default function MetodosPagoPage() {
         ) : (
           <div className="flex flex-col items-center justify-center space-y-6 py-16">
             <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-              <CreditCard className="h-6 w-6 text-muted-foreground/50" />
+              <Plus className="h-6 w-6 text-muted-foreground/50" />
             </div>
             <div className="text-center space-y-3">
               <p className="text-lg font-medium text-foreground">
-                No tienes métodos de pago aún
+                {searchQuery ? "No se encontraron categorías" : "No tienes categorías de bodegón aún"}
               </p>
-              <p className="text-sm text-muted-foreground">
-                Los métodos de pago se muestran desde datos mock locales
-              </p>
+              {!searchQuery && (
+                <p className="text-sm text-muted-foreground">
+                  Comienza agregando tu primera categoría para organizar los productos
+                </p>
+              )}
+              {searchQuery && (
+                <p className="text-sm text-muted-foreground">
+                  Intenta con otros términos de búsqueda o agrega nuevas categorías
+                </p>
+              )}
             </div>
-            <Button>
+            <Button onClick={() => setShowAddModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Agregar método de pago
+              Agregar categoría de bodegón
             </Button>
           </div>
         )}
       </div>
+
+      {/* Modals */}      
+      <AddCategoryModal 
+        open={showAddModal} 
+        onOpenChange={setShowAddModal}
+        onSuccess={refreshCategories}
+      />
+      
+      <EditCategoryModal 
+        open={showEditModal} 
+        onOpenChange={setShowEditModal}
+        category={selectedCategory}
+        onSuccess={refreshCategories}
+      />
+      
+      <DeleteCategoryModal 
+        open={showDeleteModal} 
+        onOpenChange={setShowDeleteModal}
+        category={selectedCategory}
+        onSuccess={refreshCategories}
+      />
     </>
   )
 }

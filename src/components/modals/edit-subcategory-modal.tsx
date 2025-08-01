@@ -40,10 +40,10 @@ import {
   AlertTriangle,
   CheckCircle2
 } from "lucide-react"
-import { useBodegonSubcategories, BodegonSubcategory } from "@/hooks/use-bodegon-subcategories"
-import { useRestaurantSubcategories, RestaurantSubcategory } from "@/hooks/use-restaurant-subcategories"
-import { useBodegonCategories } from "@/hooks/use-bodegon-categories"
-import { useRestaurantCategories } from "@/hooks/use-restaurant-categories"
+import { useBodegonSubcategories, BodegonSubcategory } from "@/hooks/bodegones/use-bodegon-subcategories"
+import { useRestaurantSubcategories, RestaurantSubcategory } from "@/hooks/restaurants/use-restaurant-subcategories"
+import { useBodegonCategories } from "@/hooks/bodegones/use-bodegon-categories"
+import { useRestaurantCategories } from "@/hooks/restaurants/use-restaurant-categories"
 import { useRestaurants } from "@/hooks/use-restaurants"
 
 interface EditSubcategoryModalProps {

@@ -28,6 +28,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { 
   ChevronDown, 
   Download, 
@@ -36,133 +43,77 @@ import {
   Plus,
   Search,
   SlidersHorizontal,
-  X
+  X,
+  UtensilsCrossed
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useBodegonProducts } from "@/hooks/bodegones/use-bodegon-products"
-import { useBodegonCategories } from "@/hooks/bodegones/use-bodegon-categories"
-import { useRestaurantCategories } from "@/hooks/restaurants/use-restaurant-categories"
-import { useRestaurants } from "@/hooks/use-restaurants"
-import { DeleteProductModal } from "@/components/modals/delete-product-modal"
-import { BodegonProduct } from "@/types/products"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
+import { toast } from "sonner"
+import { AddCategoryModal } from "@/components/modals/add-category-modal"
+import { EditCategoryModal } from "@/components/modals/edit-category-modal"
+import { DeleteCategoryModal } from "@/components/modals/delete-category-modal"
+import { useRestaurantCategories, RestaurantCategory } from "@/hooks/restaurants/use-restaurant-categories"
+import { useRestaurants } from "@/hooks/use-restaurants"
 
-// Demo products removed - using only real Supabase data
-
-export default function ProductosPage() {
-  const router = useRouter()
+export default function RestaurantCategoriasPage() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<BodegonProduct | null>(null)
-  const [realProducts, setRealProducts] = useState<BodegonProduct[]>([])
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(0)
-  const [productType, setProductType] = useState<'bodegon' | 'restaurant'>('bodegon')
+  const [selectedCategory, setSelectedCategory] = useState<RestaurantCategory | null>(null)
+  const [activeTab, setActiveTab] = useState("all")
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
   
-  const { getProducts, getRestaurantProducts, deleteProduct, loading, formatPrice } = useBodegonProducts()
-  const { categories: bodegonCategories } = useBodegonCategories()
-  const { categories: restaurantCategories } = useRestaurantCategories()
+  const { categories: restaurantCategories, loading, refreshCategories, updateCategory } = useRestaurantCategories()
   const { restaurants } = useRestaurants()
   
-  // Función para obtener el nombre de categoría
-  const getCategoryName = (categoryId?: string, type: 'bodegon' | 'restaurant' = 'bodegon') => {
-    if (!categoryId) return "Sin categoría"
-    const categories = type === 'bodegon' ? bodegonCategories : restaurantCategories
-    const category = categories.find(cat => cat.id === categoryId)
-    return category?.name || "Sin categoría"
+  // Helper function to get restaurant name by ID
+  const getRestaurantName = (restaurantId: string) => {
+    const restaurant = restaurants.find(r => r.id === restaurantId)
+    return restaurant ? restaurant.name : 'N/A'
   }
   
-  // Función para obtener el nombre del restaurante
-  const getRestaurantName = (restaurantId?: string) => {
-    if (!restaurantId) return "Sin restaurante"
-    const restaurant = restaurants.find(rest => rest.id === restaurantId)
-    return restaurant?.name || "Sin restaurante"
-  }
-
-  // Función para mapear productos reales al formato de la tabla
-  const mapProductToTableFormat = (product: BodegonProduct) => ({
-    id: product.id,
-    name: product.name,
-    sku: product.sku || (product.product_type === 'restaurant' ? "N/A" : "N/A"),
-    status: product.is_active_product ? "Active" : "Draft",
-    inventory: product.is_active_product ? "Disponible" : "No disponible",
-    category: getCategoryName(product.category_id, product.product_type || 'bodegon'),
-    restaurant: product.restaurant_id ? getRestaurantName(product.restaurant_id) : undefined,
-    price: formatPrice(product.price),
-    raw: product // Mantener el objeto original para operaciones
+  // Filter categories based on active tab, search, and restaurant
+  const filteredCategories = restaurantCategories.filter(category => {
+    const matchesSearch = searchQuery.trim() === "" || 
+      category.name.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesTab = 
+      activeTab === 'all' ||
+      (activeTab === 'visible' && category.is_active) ||
+      (activeTab === 'hidden' && !category.is_active)
+    
+    const matchesRestaurant = 
+      selectedRestaurant === 'all' || 
+      category.restaurant_id === selectedRestaurant
+    
+    return matchesSearch && matchesTab && matchesRestaurant
   })
-
-  const products = realProducts.map(mapProductToTableFormat)
-
-  // Cargar productos reales
-  const loadProducts = async () => {
-    let result
-    if (productType === 'bodegon') {
-      result = await getProducts(
-        { search: searchQuery },
-        { page: currentPage, limit: 25 }
-      )
-    } else {
-      result = await getRestaurantProducts(
-        { 
-          search: searchQuery,
-          restaurant_id: selectedRestaurant && selectedRestaurant !== 'all' ? selectedRestaurant : undefined
-        },
-        { page: currentPage, limit: 25 }
-      )
-    }
-    setRealProducts(result.products)
-    setTotalPages(result.pagination.totalPages)
-  }
-
-  // Cargar productos cuando cambie la página, búsqueda, tipo de producto o restaurante
-  useEffect(() => {
-    loadProducts()
-  }, [currentPage, searchQuery, productType, selectedRestaurant])
-
-  // Recargar al cambiar el término de búsqueda
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setCurrentPage(1) // Reset to first page on search
-      loadProducts()
-    }, 500) // Debounce search
-
-    return () => clearTimeout(timeoutId)
-  }, [searchQuery])
   
-  // Reset restaurant filter when changing product type
-  useEffect(() => {
-    setSelectedRestaurant('all')
-    setCurrentPage(1)
-  }, [productType])
+  const categories = filteredCategories
 
-  const handleEdit = (product: { id: string }) => {
-    router.push(`/admin/productos/${product.id}/editar`)
+  // Helper functions for category actions
+  const handleEditCategory = (category: RestaurantCategory) => {
+    setSelectedCategory(category)
+    setShowEditModal(true)
   }
 
-  const handleDelete = (product: BodegonProduct | { id: string, name: string }) => {
-    setSelectedProduct(product as BodegonProduct)
+  const handleDeleteCategory = (category: RestaurantCategory) => {
+    setSelectedCategory(category)
     setShowDeleteModal(true)
   }
 
-  const handleDeleteConfirm = async (productId: string) => {
-    const success = await deleteProduct(productId)
-    if (success) {
-      setShowDeleteModal(false)
-      setSelectedProduct(null)
-      // Recargar productos
-      loadProducts()
+  const handleToggleVisibility = async (category: RestaurantCategory) => {
+    const updatedCategory = { ...category, is_active: !category.is_active }
+    const result = await updateCategory(category.id, { is_active: !category.is_active })
+    
+    if (result.success) {
+      toast.success(`Categoría ${updatedCategory.is_active ? 'activada' : 'desactivada'} correctamente`)
+      refreshCategories()
+    } else {
+      toast.error(result.error || 'Error al actualizar categoría')
     }
   }
 
@@ -184,7 +135,19 @@ export default function ProductosPage() {
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbPage>Productos</BreadcrumbPage>
+                <BreadcrumbLink href="/admin/restaurantes">
+                  Restaurantes
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin/restaurantes/productos">
+                  Productos
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Categorías</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -195,7 +158,7 @@ export default function ProductosPage() {
         {/* Header with title and actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">Productos</h1>
+            <h1 className="text-2xl font-bold">Categorías de Restaurante</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" className="hidden sm:flex">
@@ -231,57 +194,44 @@ export default function ProductosPage() {
             <Button 
               size="sm" 
               className="flex-1 sm:flex-none justify-center"
-              onClick={() => router.push("/admin/productos/agregar")}
+              onClick={() => setShowAddModal(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
-              <span className="hidden xs:inline">Agregar producto</span>
+              <span className="hidden xs:inline">Agregar categoría</span>
               <span className="xs:hidden">Agregar</span>
             </Button>
           </div>
         </div>
 
-        {/* Filter tabs, Product Type Filters, and Search - All in one row */}
+        {/* Filter tabs, Restaurant Filter, and Search */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
-            <Tabs defaultValue="all" className="w-auto overflow-x-auto">
-              <TabsList className="grid w-full grid-cols-5 sm:w-auto sm:flex">
-                <TabsTrigger value="all">Todos</TabsTrigger>
-                <TabsTrigger value="active">Activos</TabsTrigger>
-                <TabsTrigger value="draft">Borrador</TabsTrigger>
-                <TabsTrigger value="archived" className="text-xs sm:text-sm">Archivados</TabsTrigger>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto overflow-x-auto">
+              <TabsList className="grid w-full grid-cols-4 sm:w-auto sm:flex">
+                <TabsTrigger value="all">Todas</TabsTrigger>
+                <TabsTrigger value="visible">Visibles</TabsTrigger>
+                <TabsTrigger value="hidden">Ocultas</TabsTrigger>
                 <TabsTrigger value="add" className="text-muted-foreground">
                   <Plus className="h-4 w-4" />
                 </TabsTrigger>
               </TabsList>
             </Tabs>
             
-            {/* Product Type and Restaurant Filters */}
+            {/* Restaurant Filter */}
             <div className="flex items-center gap-2">
-              <Select value={productType} onValueChange={(value: 'bodegon' | 'restaurant') => setProductType(value)}>
-                <SelectTrigger className="w-[140px] bg-white">
-                  <SelectValue placeholder="Tipo de producto" />
+              <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
+                <SelectTrigger className="w-[160px] bg-white">
+                  <SelectValue placeholder="Filtrar por restaurante" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="bodegon">Bodegón</SelectItem>
-                  <SelectItem value="restaurant">Restaurante</SelectItem>
+                  <SelectItem value="all">Todos los restaurantes</SelectItem>
+                  {restaurants.map((restaurant) => (
+                    <SelectItem key={restaurant.id} value={restaurant.id}>
+                      {restaurant.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              
-              {productType === 'restaurant' && (
-                <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
-                  <SelectTrigger className="w-[160px] bg-white">
-                    <SelectValue placeholder="Filtrar por restaurante" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="all">Todos los restaurantes</SelectItem>
-                    {restaurants.map((restaurant) => (
-                      <SelectItem key={restaurant.id} value={restaurant.id}>
-                        {restaurant.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
             </div>
           </div>
           
@@ -291,7 +241,7 @@ export default function ProductosPage() {
               <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-background w-full sm:min-w-[300px]">
                 <Search className={`h-4 w-4 ${loading ? 'animate-pulse' : ''} text-muted-foreground`} />
                 <Input
-                  placeholder="Buscar productos..."
+                  placeholder="Buscar categorías de restaurante..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="border-0 p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -326,10 +276,10 @@ export default function ProductosPage() {
           </div>
         </div>
 
-        {/* Products table */}
+        {/* Categories table */}
         {loading ? (
           <TableSkeleton rows={5} columns={6} showCheckbox={true} showActions={true} />
-        ) : products.length > 0 ? (
+        ) : categories.length > 0 ? (
           <div className="border rounded-lg bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -338,60 +288,42 @@ export default function ProductosPage() {
                     <TableHead className="w-12">
                       <Checkbox />
                     </TableHead>
-                    <TableHead className="min-w-[200px]">Producto</TableHead>
-                    {productType === 'bodegon' && <TableHead className="min-w-[120px]">SKU</TableHead>}
+                    <TableHead className="min-w-[200px]">Categoría</TableHead>
                     <TableHead className="min-w-[100px]">Estado</TableHead>
-                    <TableHead className="min-w-[120px]">Inventario</TableHead>
-                    <TableHead className="min-w-[120px]">Categoría</TableHead>
-                    {productType === 'restaurant' && <TableHead className="min-w-[150px]">Restaurante</TableHead>}
-                    <TableHead className="min-w-[100px]">Precio</TableHead>
+                    <TableHead className="min-w-[150px]">Restaurante</TableHead>
+                    <TableHead className="min-w-[120px]">Fecha de creación</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {products.map((product) => (
-                    <TableRow key={product.id}>
+                  {categories.map((category) => (
+                    <TableRow key={category.id}>
                       <TableCell>
                         <Checkbox />
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
-                            <div className="w-4 h-4 sm:w-6 sm:h-6 bg-muted-foreground/20 rounded"></div>
+                            <UtensilsCrossed className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground" />
                           </div>
-                          <span className="truncate">{product.name}</span>
+                          <span className="truncate">{category.name}</span>
                         </div>
                       </TableCell>
-                      {productType === 'bodegon' && (
-                        <TableCell className="text-muted-foreground font-mono text-xs sm:text-sm">
-                          <span className="block truncate">{product.sku}</span>
-                        </TableCell>
-                      )}
                       <TableCell>
                         <Badge 
-                          variant={product.status === "Active" ? "default" : "secondary"}
-                          className={product.status === "Active" ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
+                          variant={category.is_active ? "default" : "secondary"}
+                          className={category.is_active ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
                         >
-                          {product.status === "Active" ? "Activo" : product.status === "Draft" ? "Borrador" : product.status}
+                          {category.is_active ? "Visible" : "Oculta"}
                         </Badge>
-                      </TableCell>
-                      <TableCell className={product.inventory === "No disponible" ? "text-red-600" : "text-green-600"}>
-                        {product.inventory}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         <span className="truncate block">
-                          {product.category === "Uncategorized" ? "Sin categoría" : product.category}
+                          {getRestaurantName(category.restaurant_id)}
                         </span>
                       </TableCell>
-                      {productType === 'restaurant' && (
-                        <TableCell className="text-muted-foreground">
-                          <span className="truncate block">
-                            {product.restaurant || "Sin restaurante"}
-                          </span>
-                        </TableCell>
-                      )}
-                      <TableCell className="font-medium">
-                        {product.price}
+                      <TableCell className="text-muted-foreground">
+                        {category.created_date ? new Date(category.created_date).toLocaleDateString() : "N/A"}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -401,14 +333,16 @@ export default function ProductosPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(product)}>
+                            <DropdownMenuItem onClick={() => handleEditCategory(category)}>
                               Editar
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleToggleVisibility(category)}>
+                              {category.is_active ? "Ocultar" : "Mostrar"}
+                            </DropdownMenuItem>
                             <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                            <DropdownMenuItem>Archivar</DropdownMenuItem>
                             <DropdownMenuItem 
                               className="text-red-600"
-                              onClick={() => handleDelete(product)}
+                              onClick={() => handleDeleteCategory(category)}
                             >
                               Eliminar
                             </DropdownMenuItem>
@@ -428,33 +362,46 @@ export default function ProductosPage() {
             </div>
             <div className="text-center space-y-3">
               <p className="text-lg font-medium text-foreground">
-                {searchQuery ? "No se encontraron productos" : "No tienes productos aún"}
+                {searchQuery ? "No se encontraron categorías" : "No tienes categorías de restaurante aún"}
               </p>
               {!searchQuery && (
                 <p className="text-sm text-muted-foreground">
-                  Comienza agregando tu primer producto al catálogo
+                  Comienza agregando tu primera categoría para organizar los productos
                 </p>
               )}
               {searchQuery && (
                 <p className="text-sm text-muted-foreground">
-                  Intenta con otros términos de búsqueda o agrega nuevos productos
+                  Intenta con otros términos de búsqueda o agrega nuevas categorías
                 </p>
               )}
             </div>
-            <Button onClick={() => router.push("/admin/productos/agregar")}>
+            <Button onClick={() => setShowAddModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Agregar producto
+              Agregar categoría de restaurante
             </Button>
           </div>
         )}
       </div>
 
       {/* Modals */}      
-      <DeleteProductModal 
+      <AddCategoryModal 
+        open={showAddModal} 
+        onOpenChange={setShowAddModal}
+        onSuccess={refreshCategories}
+      />
+      
+      <EditCategoryModal 
+        open={showEditModal} 
+        onOpenChange={setShowEditModal}
+        category={selectedCategory}
+        onSuccess={refreshCategories}
+      />
+      
+      <DeleteCategoryModal 
         open={showDeleteModal} 
         onOpenChange={setShowDeleteModal}
-        product={selectedProduct}
-        onDelete={handleDeleteConfirm}
+        category={selectedCategory}
+        onSuccess={refreshCategories}
       />
     </>
   )

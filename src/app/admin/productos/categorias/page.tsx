@@ -46,8 +46,8 @@ import { toast } from "sonner"
 import { AddCategoryModal } from "@/components/modals/add-category-modal"
 import { EditCategoryModal } from "@/components/modals/edit-category-modal"
 import { DeleteCategoryModal } from "@/components/modals/delete-category-modal"
-import { useBodegonCategories, BodegonCategory } from "@/hooks/use-bodegon-categories"
-import { useRestaurantCategories, RestaurantCategory } from "@/hooks/use-restaurant-categories"
+import { useBodegonCategories, BodegonCategory } from "@/hooks/bodegones/use-bodegon-categories"
+import { useRestaurantCategories, RestaurantCategory } from "@/hooks/restaurants/use-restaurant-categories"
 import { useRestaurants } from "@/hooks/use-restaurants"
 
 export default function CategoriasPage() {
@@ -352,7 +352,7 @@ export default function CategoriasPage() {
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="cursor-pointer">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>

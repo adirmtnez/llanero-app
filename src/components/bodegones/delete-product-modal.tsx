@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import {
   Dialog,
@@ -27,73 +27,109 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react"
-import { useBodegonSubcategories, BodegonSubcategory } from "@/hooks/bodegones/use-bodegon-subcategories"
-import { useRestaurantSubcategories, RestaurantSubcategory } from "@/hooks/restaurants/use-restaurant-subcategories"
+import { BodegonProduct } from "@/types/products"
+import { useBodegonProducts } from "@/hooks/bodegones/use-bodegon-products"
 
-interface DeleteSubcategoryModalProps {
+interface DeleteBodegonProductModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  subcategory: (BodegonSubcategory & { subcategoryType: 'bodegon' }) | (RestaurantSubcategory & { subcategoryType: 'restaurant' }) | null
+  product: BodegonProduct | null
   onSuccess?: () => void
 }
 
-export function DeleteSubcategoryModal({ open, onOpenChange, subcategory, onSuccess }: DeleteSubcategoryModalProps) {
+export function DeleteBodegonProductModal({
+  open,
+  onOpenChange,
+  product,
+  onSuccess,
+}: DeleteBodegonProductModalProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
-  const { deleteSubcategory: deleteBodegonSubcategory } = useBodegonSubcategories()
-  const { deleteSubcategory: deleteRestaurantSubcategory } = useRestaurantSubcategories()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [deletionStep, setDeletionStep] = useState("")
+  
+  const { deleteProduct } = useBodegonProducts()
 
   const handleDelete = async () => {
-    if (!subcategory) return
+    if (!product) return
 
     setIsLoading(true)
     setError("")
+    setDeletionStep("Iniciando eliminación...")
 
     try {
-      const deleteSubcategory = subcategory.subcategoryType === 'bodegon' ? deleteBodegonSubcategory : deleteRestaurantSubcategory
+      // Simulate progress updates
+      setDeletionStep("Eliminando inventario de bodegones...")
+      await new Promise(resolve => setTimeout(resolve, 800))
       
-      const result = await deleteSubcategory(subcategory.id)
-
-      if (result.error) {
-        throw new Error(result.error)
+      setDeletionStep("Eliminando producto de la base de datos...")
+      const success = await deleteProduct(product.id)
+      
+      if (!success) {
+        throw new Error("Error al eliminar el producto de bodegón")
       }
-
-      // Show success toast
-      toast.success("¡Subcategoría eliminada exitosamente!", {
-        description: `${subcategory.name} ha sido eliminada permanentemente.`
-      })
-
-      // Call success callback
-      onSuccess?.()
       
-      // Close modal
+      setDeletionStep("Finalizando eliminación...")
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Show success toast
+      toast.success("¡Producto de bodegón eliminado exitosamente!", {
+        description: `${product.name} y su inventario han sido eliminados permanentemente.`
+      })
+      
+      // Close modal and call success callback
       onOpenChange(false)
+      onSuccess?.()
 
     } catch (error: any) {
-      console.error('Error deleting subcategory:', error)
-      setError(error.message || 'Error al eliminar la subcategoría')
-      toast.error("Error al eliminar subcategoría", {
+      console.error('Error deleting bodegon product:', error)
+      setError(error.message || 'Error al eliminar el producto de bodegón')
+      toast.error("Error al eliminar producto de bodegón", {
         description: error.message || "Ocurrió un error inesperado"
       })
     } finally {
       setIsLoading(false)
+      setDeletionStep("")
     }
   }
 
   const handleCancel = () => {
     setError("")
+    setDeletionStep("")
     onOpenChange(false)
   }
 
+  // Reset state when modal opens
+  React.useEffect(() => {
+    if (open) {
+      setError("")
+      setDeletionStep("")
+      setIsLoading(false)
+    }
+  }, [open])
+
   const renderContent = () => (
     <div className="space-y-4 py-4">
-      <p className="text-center text-muted-foreground">
-        ¿Estás seguro de que quieres eliminar la subcategoría <strong>"{subcategory?.name}"</strong>?
-      </p>
-      <p className="text-center text-sm text-muted-foreground">
-        Esta acción no se puede deshacer.
-      </p>
+      {!isLoading ? (
+        <>
+          <p className="text-center text-muted-foreground">
+            ¿Estás seguro de que quieres eliminar el producto de bodegón <strong>"{product?.name}"</strong>?
+          </p>
+          <p className="text-center text-sm text-muted-foreground">
+            Esta acción eliminará el producto y todo su inventario en los bodegones. No se puede deshacer.
+          </p>
+        </>
+      ) : (
+        <div className="text-center space-y-3">
+          <div className="flex items-center justify-center space-x-2">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-sm font-medium">{deletionStep}</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Por favor espera mientras eliminamos el producto y su inventario de bodegones...
+          </p>
+        </div>
+      )}
 
       {error && (
         <Alert variant="destructive">
@@ -111,10 +147,10 @@ export function DeleteSubcategoryModal({ open, onOpenChange, subcategory, onSucc
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-900">
               <Trash2 className="h-5 w-5" />
-              Eliminar Subcategoría
+              Eliminar Producto de Bodegón
             </DialogTitle>
             <DialogDescription>
-              Esta acción no se puede deshacer
+              Esta acción eliminará el producto y su inventario permanentemente
             </DialogDescription>
           </DialogHeader>
 
@@ -140,7 +176,7 @@ export function DeleteSubcategoryModal({ open, onOpenChange, subcategory, onSucc
               ) : (
                 <Trash2 className="h-4 w-4 mr-2" />
               )}
-              Eliminar Subcategoría
+              Eliminar Producto de Bodegón
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -154,10 +190,10 @@ export function DeleteSubcategoryModal({ open, onOpenChange, subcategory, onSucc
         <DrawerHeader className="text-left">
           <DrawerTitle className="flex items-center gap-2 text-red-900">
             <Trash2 className="h-5 w-5" />
-            Eliminar Subcategoría
+            Eliminar Producto de Bodegón
           </DrawerTitle>
           <DrawerDescription>
-            Esta acción no se puede deshacer
+            Esta acción eliminará el producto y su inventario permanentemente
           </DrawerDescription>
         </DrawerHeader>
         
@@ -177,7 +213,7 @@ export function DeleteSubcategoryModal({ open, onOpenChange, subcategory, onSucc
             ) : (
               <Trash2 className="h-4 w-4 mr-2" />
             )}
-            Eliminar Subcategoría
+            Eliminar Producto de Bodegón
           </Button>
           <DrawerClose asChild>
             <Button 

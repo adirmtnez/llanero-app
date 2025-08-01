@@ -21,6 +21,7 @@ import {
 
 export function NavMain({
   items,
+  title,
 }: {
   items: {
     title: string
@@ -32,12 +33,13 @@ export function NavMain({
       url: string
     }[]
   }[]
+  title?: string
 }) {
   const pathname = usePathname()
   
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
+      {title && <SidebarGroupLabel>{title}</SidebarGroupLabel>}
       <SidebarMenu>
         {items.map((item) => {
           // If item has subitems, render as collapsible

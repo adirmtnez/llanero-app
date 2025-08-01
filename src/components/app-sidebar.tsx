@@ -85,26 +85,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         isActive: isNavItemActive("/admin", false),
       },
       {
-        title: "Productos",
-        url: "/admin/productos",
-        icon: Package,
-        isActive: isNavItemActive("/admin/productos", true),
-        items: [
-          {
-            title: "Todos",
-            url: "/admin/productos",
-          },
-          {
-            title: "Categorias",
-            url: "/admin/productos/categorias",
-          },
-          {
-            title: "Sub Categorias",
-            url: "/admin/productos/sub-categorias",
-          },
-        ],
-      },
-      {
         title: "Pedidos",
         url: "/admin/pedidos",
         icon: ShoppingCart,
@@ -117,19 +97,63 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         isActive: isNavItemActive("/admin/marketing", false),
       },
     ],
-    administration: [
+    bodegones: [
       {
-        name: "Bodegones",
+        title: "Localidades",
         url: "/admin/bodegones",
         icon: Store,
-        isActive: isAdminItemActive("/admin/bodegones"),
+        isActive: isNavItemActive("/admin/bodegones", false),
       },
       {
-        name: "Restaurantes",
+        title: "Productos",
+        url: "/admin/bodegones/productos",
+        icon: Package,
+        isActive: isNavItemActive("/admin/bodegones/productos", true),
+        items: [
+          {
+            title: "Todos",
+            url: "/admin/bodegones/productos",
+          },
+          {
+            title: "Categorías",
+            url: "/admin/bodegones/productos/categorias",
+          },
+          {
+            title: "Sub Categorías",
+            url: "/admin/bodegones/productos/sub-categorias",
+          },
+        ],
+      },
+    ],
+    restaurantes: [
+      {
+        title: "Localidades",
         url: "/admin/restaurantes",
         icon: UtensilsCrossed,
-        isActive: isAdminItemActive("/admin/restaurantes"),
+        isActive: isNavItemActive("/admin/restaurantes", false),
       },
+      {
+        title: "Productos",
+        url: "/admin/restaurantes/productos",
+        icon: Package,
+        isActive: isNavItemActive("/admin/restaurantes/productos", true),
+        items: [
+          {
+            title: "Todos",
+            url: "/admin/restaurantes/productos",
+          },
+          {
+            title: "Categorías",
+            url: "/admin/restaurantes/productos/categorias",
+          },
+          {
+            title: "Sub Categorías",
+            url: "/admin/restaurantes/productos/sub-categorias",
+          },
+        ],
+      },
+    ],
+    administration: [
       {
         name: "Métodos de pago",
         url: "/admin/metodos-pago",
@@ -158,6 +182,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
+        <NavMain items={data.bodegones} title="Bodegones" />
+        <NavMain items={data.restaurantes} title="Restaurantes" />
         <NavProjects projects={data.administration} title="Administración" />
       </SidebarContent>
       <SidebarFooter>
