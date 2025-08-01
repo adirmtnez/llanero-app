@@ -144,7 +144,7 @@ export default function AgregarProductoPage() {
       })
       
       if (validImages.length > 0) {
-        setImages(prev => [...prev, ...validImages].slice(0, 6))
+        setImages(prev => [...prev, ...validImages].slice(0, 4))
       }
     }
   }
@@ -439,7 +439,7 @@ export default function AgregarProductoPage() {
                   
                   {/* Image Preview */}
                   {images.length > 0 && (
-                    <div className="grid grid-cols-6 gap-2 mt-4">
+                    <div className="grid grid-cols-4 gap-2 mt-4">
                       {Array.from({ length: 6 }).map((_, index) => (
                         <div
                           key={index}

@@ -249,7 +249,7 @@ export default function EditarProductoPage() {
       })
       
       if (validImages.length > 0) {
-        setImages(prev => [...prev, ...validImages].slice(0, 6))
+        setImages(prev => [...prev, ...validImages].slice(0, 4))
       }
     }
   }
@@ -618,7 +618,7 @@ export default function EditarProductoPage() {
                       {existingImages.length > 0 && (
                         <div>
                           <p className="text-sm font-medium mb-2">Imágenes actuales:</p>
-                          <div className="grid grid-cols-6 gap-2">
+                          <div className="grid grid-cols-4 gap-2">
                             {existingImages.map((imageUrl, index) => (
                               <div
                                 key={`existing-${index}`}
@@ -652,7 +652,7 @@ export default function EditarProductoPage() {
                       {images.length > 0 && (
                         <div>
                           <p className="text-sm font-medium mb-2">Nuevas imágenes:</p>
-                          <div className="grid grid-cols-6 gap-2">
+                          <div className="grid grid-cols-4 gap-2">
                             {images.map((image, index) => (
                               <div
                                 key={`new-${index}`}

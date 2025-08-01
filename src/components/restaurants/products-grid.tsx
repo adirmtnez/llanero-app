@@ -109,7 +109,7 @@ export function RestaurantProductsGrid({ products, onProductDeleted, categories 
                   </div>
 
                   {/* Actions Menu */}
-                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <div className="absolute top-3 right-3 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button 

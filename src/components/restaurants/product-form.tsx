@@ -280,8 +280,8 @@ export function RestaurantProductForm({ product, mode }: RestaurantProductFormPr
       
       if (validImages.length > 0) {
         const totalImages = existingImages.length + images.length + validImages.length
-        if (totalImages > 6) {
-          toast.warning("Máximo 6 imágenes permitidas")
+        if (totalImages > 4) {
+          toast.warning("Máximo 4 imágenes permitidas")
           return
         }
         setImages(prev => [...prev, ...validImages])
@@ -510,7 +510,7 @@ export function RestaurantProductForm({ product, mode }: RestaurantProductFormPr
                 
                 {/* Image Preview */}
                 {(existingImages.length > 0 || images.length > 0) && (
-                  <div className="grid grid-cols-6 gap-2 mt-4">
+                  <div className="grid grid-cols-4 gap-2 mt-4">
                     {/* Existing Images */}
                     {existingImages.map((imageUrl, index) => (
                       <div
@@ -558,7 +558,7 @@ export function RestaurantProductForm({ product, mode }: RestaurantProductFormPr
                     ))}
                     
                     {/* Empty slots */}
-                    {Array.from({ length: Math.max(0, 6 - existingImages.length - images.length) }).map((_, index) => (
+                    {Array.from({ length: Math.max(0, 4 - existingImages.length - images.length) }).map((_, index) => (
                       <div
                         key={`empty-${index}`}
                         className="aspect-square border-2 border-dashed border-muted rounded-lg flex items-center justify-center"
