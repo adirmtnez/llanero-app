@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ProfileView from './profile-view'
 import CartDrawer from './cart-drawer'
 import ProductCard from './product-card'
@@ -27,6 +27,55 @@ export default function MobileView() {
       [productId]: (prev[productId] || 0) + 1
     }))
   }
+
+  // Estado y funciones del slider
+  const [currentSlide, setCurrentSlide] = useState(0)
+  const [touchStart, setTouchStart] = useState(0)
+  const [touchEnd, setTouchEnd] = useState(0)
+  const totalSlides = 3
+
+  // Función para ir al siguiente slide
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % totalSlides)
+  }
+
+  // Función para ir al slide anterior
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides)
+  }
+
+  // Funciones para navegación táctil
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+
+    if (isLeftSwipe) {
+      nextSlide()
+    }
+    if (isRightSwipe) {
+      prevSlide()
+    }
+  }
+
+  // Auto-play del slider
+  useEffect(() => {
+    const interval = setInterval(() => {
+      nextSlide()
+    }, 5000) // Cambia cada 5 segundos
+
+    return () => clearInterval(interval)
+  }, [currentSlide])
 
   // Función para decrementar cantidad
   const decrementQuantity = (productId: string) => {
@@ -108,7 +157,7 @@ export default function MobileView() {
           <div className="flex overflow-x-auto space-x-3 px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {/* Boulevard Rose */}
             <div className="text-center flex-shrink-0">
-              <div className="w-16 h-16 mx-auto mb-2 bg-black rounded-full flex items-center justify-center">
+              <div className="w-20 h-20 mx-auto mb-2 bg-black rounded-full flex items-center justify-center">
                 <div className="text-white text-xs font-bold">
                   <div>BOULEVARD</div>
                   <div>ROSE</div>
@@ -119,7 +168,7 @@ export default function MobileView() {
             
             {/* La Nave */}
             <div className="text-center flex-shrink-0">
-              <div className="w-16 h-16 mx-auto mb-2 bg-red-600 rounded-full flex items-center justify-center">
+              <div className="w-20 h-20 mx-auto mb-2 bg-red-600 rounded-full flex items-center justify-center">
                 <div className="text-white text-xs font-bold">
                   <div>LA</div>
                   <div>NAVE</div>
@@ -130,7 +179,7 @@ export default function MobileView() {
             
             {/* Orinoco Grill */}
             <div className="text-center flex-shrink-0">
-              <div className="w-16 h-16 mx-auto mb-2 bg-gray-800 rounded-full flex items-center justify-center">
+              <div className="w-20 h-20 mx-auto mb-2 bg-gray-800 rounded-full flex items-center justify-center">
                 <div className="text-white text-xs font-bold text-center">
                   <div>ORINOCO</div>
                   <div>GRILL</div>
@@ -141,7 +190,7 @@ export default function MobileView() {
           </div>
         </div>
 
-        {/* Sección de Snacks */}
+        {/* 1. Sección de Snacks */}
         <div className="py-4">
           <h2 className="text-xl font-bold text-gray-900 mb-4 px-4">Snacks</h2>
           <div className="flex overflow-x-auto space-x-3 px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -239,6 +288,144 @@ export default function MobileView() {
               />
           </div>
         </div>
+
+        {/* Slider Publicitario */}
+        <div className="py-4 px-4">
+          <div className="w-full max-h-[400px] mx-auto relative">
+            <div 
+              className="relative overflow-hidden rounded-[30px] h-[400px] shadow-lg cursor-grab active:cursor-grabbing"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              {/* Slides */}
+              <div 
+                className="flex transition-transform duration-500 ease-in-out h-full"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+              >
+                {/* Slide 1 */}
+                <div className="w-full h-full flex-shrink-0 bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg select-none">
+                  <span>Publicidad Marca 1</span>
+                </div>
+                
+                {/* Slide 2 */}
+                <div className="w-full h-full flex-shrink-0 bg-gradient-to-r from-green-500 to-teal-600 flex items-center justify-center text-white font-semibold text-lg select-none">
+                  <span>Publicidad Marca 2</span>
+                </div>
+                
+                {/* Slide 3 */}
+                <div className="w-full h-full flex-shrink-0 bg-gradient-to-r from-orange-500 to-red-600 flex items-center justify-center text-white font-semibold text-lg select-none">
+                  <span>Publicidad Marca 3</span>
+                </div>
+              </div>
+              
+              {/* Indicadores */}
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                {[0, 1, 2].map((index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`w-3 h-3 rounded-full transition-all ${
+                      currentSlide === index ? 'bg-white' : 'bg-white bg-opacity-50'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Sección de Rones */}
+        <div className="py-4">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 px-4">Rones</h2>
+          <div className="flex overflow-x-auto space-x-3 px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {/* Ron Añejo */}
+            <ProductCard
+               emoji="🥃"
+               title="Ron Añejo"
+               description="Premium aged rum with..."
+               price="$25.00"
+               quantity={cart['ron-anejo'] || 0}
+               variant="horizontal"
+               onAddToCart={() => addToCart('ron-anejo')}
+               onIncrement={() => incrementQuantity('ron-anejo')}
+               onDecrement={() => decrementQuantity('ron-anejo')}
+             />
+
+            {/* Ron Blanco */}
+            <ProductCard
+               emoji="🍾"
+               title="Ron Blanco"
+               description="Crystal clear white rum..."
+               price="$18.00"
+               quantity={cart['ron-blanco'] || 0}
+               variant="horizontal"
+               onAddToCart={() => addToCart('ron-blanco')}
+               onIncrement={() => incrementQuantity('ron-blanco')}
+               onDecrement={() => decrementQuantity('ron-blanco')}
+             />
+
+            {/* Ron Dorado */}
+            <ProductCard
+               emoji="🥃"
+               title="Ron Dorado"
+               description="Golden rum with smooth..."
+               price="$22.00"
+               quantity={cart['ron-dorado'] || 0}
+               variant="horizontal"
+               onAddToCart={() => addToCart('ron-dorado')}
+               onIncrement={() => incrementQuantity('ron-dorado')}
+               onDecrement={() => decrementQuantity('ron-dorado')}
+             />
+          </div>
+        </div>
+
+        {/* 3. Sección de Mercado */}
+        <div className="py-4">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 px-4">Mercado</h2>
+          <div className="flex overflow-x-auto space-x-3 px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {/* Arroz */}
+            <ProductCard
+               emoji="🍚"
+               title="Arroz Blanco"
+               description="Premium white rice 1kg..."
+               price="$3.50"
+               quantity={cart['arroz-blanco'] || 0}
+               variant="horizontal"
+               onAddToCart={() => addToCart('arroz-blanco')}
+               onIncrement={() => incrementQuantity('arroz-blanco')}
+               onDecrement={() => decrementQuantity('arroz-blanco')}
+             />
+
+            {/* Aceite */}
+            <ProductCard
+               emoji="🫒"
+               title="Aceite de Oliva"
+               description="Extra virgin olive oil..."
+               price="$8.00"
+               quantity={cart['aceite-oliva'] || 0}
+               variant="horizontal"
+               onAddToCart={() => addToCart('aceite-oliva')}
+               onIncrement={() => incrementQuantity('aceite-oliva')}
+               onDecrement={() => decrementQuantity('aceite-oliva')}
+             />
+
+            {/* Leche */}
+            <ProductCard
+               emoji="🥛"
+               title="Leche Entera"
+               description="Fresh whole milk 1L..."
+               price="$2.50"
+               quantity={cart['leche-entera'] || 0}
+               variant="horizontal"
+               onAddToCart={() => addToCart('leche-entera')}
+               onIncrement={() => incrementQuantity('leche-entera')}
+               onDecrement={() => decrementQuantity('leche-entera')}
+             />
+          </div>
+        </div>
+
+
       </main>
 
       {/* Navegación inferior */}
