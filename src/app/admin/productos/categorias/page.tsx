@@ -42,6 +42,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
+import { Pagination } from "@/components/ui/pagination"
 import { toast } from "sonner"
 import { AddCategoryModal } from "@/components/modals/add-category-modal"
 import { EditCategoryModal } from "@/components/modals/edit-category-modal"
@@ -58,6 +59,8 @@ export default function CategoriasPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<(BodegonCategory & { categoryType: 'bodegon' }) | (RestaurantCategory & { categoryType: 'restaurant' }) | null>(null)
   const [activeTab, setActiveTab] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   
   const { categories: bodegonCategories, loading: bodegonLoading, refreshCategories: refreshBodegonCategories, updateCategory: updateBodegonCategory } = useBodegonCategories()
   const { categories: restaurantCategories, loading: restaurantLoading, refreshCategories: refreshRestaurantCategories, updateCategory: updateRestaurantCategory } = useRestaurantCategories()
@@ -86,7 +89,27 @@ export default function CategoriasPage() {
   })
   
   const loading = bodegonLoading || restaurantLoading
-  const categories = filteredCategories
+  
+  // Pagination logic
+  const totalItems = filteredCategories.length
+  const totalPages = Math.ceil(totalItems / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  const categories = filteredCategories.slice(startIndex, endIndex)
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, activeTab])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    setCurrentPage(1)
+  }
 
   // Helper functions for category actions
   const handleEditCategory = (category: (BodegonCategory & { categoryType: 'bodegon' }) | (RestaurantCategory & { categoryType: 'restaurant' })) => {
@@ -381,6 +404,18 @@ export default function CategoriasPage() {
                 </TableBody>
               </Table>
             </div>
+            
+            {/* Pagination */}
+            {totalItems > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-6 py-16">

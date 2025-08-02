@@ -50,18 +50,18 @@ interface AddSubcategoryModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
+  subcategoryType?: "bodegon" | "restaurant"
 }
 
 interface SubcategoryForm {
   name: string
   description: string
-  type: "bodegon" | "restaurant" | ""
   parent_category: string
   restaurant_id: string
   image: File | null
 }
 
-export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcategoryModalProps) {
+export function AddSubcategoryModal({ open, onOpenChange, onSuccess, subcategoryType = "restaurant" }: AddSubcategoryModalProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const { createSubcategory: createBodegonSubcategory, updateSubcategory: updateBodegonSubcategory } = useBodegonSubcategories()
   const { createSubcategory: createRestaurantSubcategory, updateSubcategory: updateRestaurantSubcategory } = useRestaurantSubcategories()
@@ -71,7 +71,6 @@ export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcat
   const [formData, setFormData] = useState<SubcategoryForm>({
     name: "",
     description: "",
-    type: "",
     parent_category: "",
     restaurant_id: "",
     image: null
@@ -89,16 +88,6 @@ export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcat
     setSuccess(false)
   }
 
-  const handleTypeChange = (value: "bodegon" | "restaurant") => {
-    setFormData(prev => ({
-      ...prev,
-      type: value,
-      parent_category: "", // Reset category selection when type changes
-      restaurant_id: "" // Reset restaurant selection when type changes
-    }))
-    setError("")
-    setSuccess(false)
-  }
 
   const handleParentCategoryChange = (value: string) => {
     setFormData(prev => ({
@@ -132,7 +121,6 @@ export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcat
     setFormData({
       name: "",
       description: "",
-      type: "",
       parent_category: "",
       restaurant_id: "",
       image: null
@@ -147,17 +135,12 @@ export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcat
       return
     }
 
-    if (!formData.type) {
-      setError("El tipo de subcategoría es requerido")
-      return
-    }
-
     if (!formData.parent_category) {
       setError("La categoría padre es requerida")
       return
     }
 
-    if (formData.type === "restaurant" && !formData.restaurant_id) {
+    if (subcategoryType === "restaurant" && !formData.restaurant_id) {
       setError("El restaurante es requerido para subcategorías de restaurante")
       return
     }
@@ -167,8 +150,8 @@ export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcat
 
     try {
       // Create subcategory using the appropriate hook based on type
-      const createSubcategory = formData.type === 'bodegon' ? createBodegonSubcategory : createRestaurantSubcategory
-      const updateSubcategory = formData.type === 'bodegon' ? updateBodegonSubcategory : updateRestaurantSubcategory
+      const createSubcategory = subcategoryType === 'bodegon' ? createBodegonSubcategory : createRestaurantSubcategory
+      const updateSubcategory = subcategoryType === 'bodegon' ? updateBodegonSubcategory : updateRestaurantSubcategory
       
       // Prepare subcategory data based on type
       const subcategoryData: any = {
@@ -179,7 +162,7 @@ export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcat
       }
 
       // Add description for restaurant subcategories
-      if (formData.type === "restaurant") {
+      if (subcategoryType === "restaurant") {
         subcategoryData.description = formData.description.trim() || null
         subcategoryData.restaurant_id = formData.restaurant_id
       }
@@ -196,7 +179,7 @@ export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcat
         const uploadResult = await uploadFileToStorage(
           formData.image, 
           'subcategories', 
-          `${formData.type}-subcategory-${result.data.id}-${formData.name.replace(/\s+/g, '-').toLowerCase()}`
+          `${subcategoryType}-subcategory-${result.data.id}-${formData.name.replace(/\s+/g, '-').toLowerCase()}`
         )
 
         if (uploadResult.error) {
@@ -227,7 +210,7 @@ export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcat
 
       // Show success toast
       toast.success("¡Subcategoría creada exitosamente!", {
-        description: `${formData.name} ha sido agregada a las subcategorías ${formData.type === 'bodegon' ? 'de bodegón' : 'de restaurante'}.`
+        description: `${formData.name} ha sido agregada a las subcategorías ${subcategoryType === 'bodegon' ? 'de bodegón' : 'de restaurante'}.`
       })
 
       // Call success callback
@@ -254,10 +237,10 @@ export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcat
   }
 
   // Get available categories based on type and restaurant selection
-  const availableCategories = formData.type === 'bodegon' 
+  const availableCategories = subcategoryType === 'bodegon' 
     ? bodegonCategories 
     : restaurantCategories.filter(cat => 
-        formData.type === 'restaurant' && formData.restaurant_id 
+        subcategoryType === 'restaurant' && formData.restaurant_id 
           ? cat.restaurant_id === formData.restaurant_id 
           : true
       )
@@ -275,24 +258,7 @@ export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcat
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="type">Tipo *</Label>
-        <Select
-          value={formData.type}
-          onValueChange={handleTypeChange}
-          disabled={isLoading}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecciona el tipo de subcategoría" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="bodegon">Bodegón</SelectItem>
-            <SelectItem value="restaurant">Restaurante</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {formData.type === "restaurant" && (
+      {subcategoryType === "restaurant" && (
         <div className="space-y-2">
           <Label htmlFor="restaurant">Restaurante *</Label>
           <Select
@@ -314,7 +280,7 @@ export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcat
         </div>
       )}
 
-      {formData.type && (formData.type === 'bodegon' || (formData.type === 'restaurant' && formData.restaurant_id)) && (
+      {subcategoryType === 'bodegon' || (subcategoryType === 'restaurant' && formData.restaurant_id) ? (
         <div className="space-y-2">
           <Label htmlFor="parent_category">Categoría Padre *</Label>
           <Select
@@ -333,15 +299,15 @@ export function AddSubcategoryModal({ open, onOpenChange, onSuccess }: AddSubcat
               ))}
             </SelectContent>
           </Select>
-          {formData.type === 'restaurant' && availableCategories.length === 0 && formData.restaurant_id && (
+          {subcategoryType === 'restaurant' && availableCategories.length === 0 && formData.restaurant_id && (
             <p className="text-xs text-muted-foreground text-orange-600">
               El restaurante seleccionado no tiene categorías. Primero debes crear categorías para este restaurante.
             </p>
           )}
         </div>
-      )}
+      ) : null}
 
-      {formData.type === "restaurant" && (
+      {subcategoryType === "restaurant" && (
         <div className="space-y-2">
           <Label htmlFor="description">Descripción</Label>
           <Textarea

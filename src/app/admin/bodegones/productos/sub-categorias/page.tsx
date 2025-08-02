@@ -49,8 +49,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
+import { Pagination } from "@/components/ui/pagination"
 import { toast } from "sonner"
-import { AddCategoryModal } from "@/components/modals/add-category-modal"
+import { AddSubcategoryModal } from "@/components/modals/add-subcategory-modal"
 import { EditCategoryModal } from "@/components/modals/edit-category-modal"
 import { DeleteSubcategoryModal } from "@/components/modals/delete-subcategory-modal"
 import { useBodegonSubcategories, BodegonSubcategory } from "@/hooks/bodegones/use-bodegon-subcategories"
@@ -65,6 +66,8 @@ export default function BodegonSubCategoriasPage() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<(BodegonSubcategory & { subcategoryType: 'bodegon' }) | null>(null)
   const [activeTab, setActiveTab] = useState("all")
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   
   const { subcategories: bodegonSubcategories, loading, refreshSubcategories, updateSubcategory } = useBodegonSubcategories()
   const { categories: bodegonCategories } = useBodegonCategories()
@@ -92,7 +95,26 @@ export default function BodegonSubCategoriasPage() {
     return matchesSearch && matchesTab && matchesCategory
   })
   
-  const subcategories = filteredSubcategories
+  // Pagination logic
+  const totalItems = filteredSubcategories.length
+  const totalPages = Math.ceil(totalItems / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  const subcategories = filteredSubcategories.slice(startIndex, endIndex)
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, activeTab, selectedCategory])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    setCurrentPage(1)
+  }
 
   // Helper functions for subcategory actions
   const handleEditSubcategory = (subcategory: BodegonSubcategory) => {
@@ -303,8 +325,16 @@ export default function BodegonSubCategoriasPage() {
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
-                            <UtensilsCrossed className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground" />
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {subcategory.image ? (
+                              <img 
+                                src={subcategory.image} 
+                                alt={subcategory.name}
+                                className="w-full h-full object-cover rounded"
+                              />
+                            ) : (
+                              <UtensilsCrossed className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground" />
+                            )}
                           </div>
                           <span className="truncate">{subcategory.name}</span>
                         </div>
@@ -354,6 +384,18 @@ export default function BodegonSubCategoriasPage() {
                 </TableBody>
               </Table>
             </div>
+            
+            {/* Pagination */}
+            {totalItems > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-6 py-16">
@@ -384,10 +426,11 @@ export default function BodegonSubCategoriasPage() {
       </div>
 
       {/* Modals */}      
-      <AddCategoryModal 
+      <AddSubcategoryModal 
         open={showAddModal} 
         onOpenChange={setShowAddModal}
         onSuccess={refreshSubcategories}
+        subcategoryType="bodegon"
       />
       
       <EditCategoryModal 

@@ -49,6 +49,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
+import { Pagination } from "@/components/ui/pagination"
 import { toast } from "sonner"
 import { AddCategoryModal } from "@/components/modals/add-category-modal"
 import { EditCategoryModal } from "@/components/modals/edit-category-modal"
@@ -65,6 +66,8 @@ export default function RestaurantCategoriasPage() {
   const [selectedCategory, setSelectedCategory] = useState<RestaurantCategory | null>(null)
   const [activeTab, setActiveTab] = useState("all")
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   
   const { categories: restaurantCategories, loading, refreshCategories, updateCategory } = useRestaurantCategories()
   const { restaurants } = useRestaurants()
@@ -92,7 +95,26 @@ export default function RestaurantCategoriasPage() {
     return matchesSearch && matchesTab && matchesRestaurant
   })
   
-  const categories = filteredCategories
+  // Pagination logic
+  const totalItems = filteredCategories.length
+  const totalPages = Math.ceil(totalItems / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  const categories = filteredCategories.slice(startIndex, endIndex)
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, activeTab, selectedRestaurant])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    setCurrentPage(1)
+  }
 
   // Helper functions for category actions
   const handleEditCategory = (category: RestaurantCategory) => {
@@ -354,6 +376,18 @@ export default function RestaurantCategoriasPage() {
                 </TableBody>
               </Table>
             </div>
+            
+            {/* Pagination */}
+            {totalItems > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-6 py-16">
@@ -388,6 +422,7 @@ export default function RestaurantCategoriasPage() {
         open={showAddModal} 
         onOpenChange={setShowAddModal}
         onSuccess={refreshCategories}
+        categoryType="restaurant"
       />
       
       <EditCategoryModal 

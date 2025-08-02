@@ -22,6 +22,7 @@ import { useRestaurantSubcategories } from "@/hooks/restaurants/use-restaurant-s
 import { useRestaurantProducts } from "@/hooks/restaurants/use-restaurant-products"
 import { useProductImages } from "@/hooks/use-product-images"
 import { AddCategoryModal } from "@/components/modals/add-category-modal"
+import { AddSubcategoryModal } from "@/components/modals/add-subcategory-modal"
 import { DeleteRestaurantProductModal } from "@/components/restaurants/delete-product-modal"
 import { QuickAddCategoryPopover } from "@/components/quick-add-category-popover"
 import { toast } from "sonner"
@@ -828,15 +829,17 @@ export function RestaurantProductForm({ product, mode }: RestaurantProductFormPr
         onSuccess={() => {
           setShowCategoryModal(false)
         }}
+        categoryType="restaurant"
       />
 
       {/* Subcategory Creation Modal */}
-      <AddCategoryModal
+      <AddSubcategoryModal
         open={showSubcategoryModal}
         onOpenChange={setShowSubcategoryModal}
         onSuccess={() => {
           setShowSubcategoryModal(false)
         }}
+        subcategoryType="restaurant"
       />
 
       {/* Delete Product Modal */}

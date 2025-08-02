@@ -36,6 +36,7 @@ import { useRestaurantSubcategories } from "@/hooks/restaurants/use-restaurant-s
 import { useBodegonProducts } from "@/hooks/bodegones/use-bodegon-products"
 import { useProductImages } from "@/hooks/use-product-images"
 import { AddCategoryModal } from "@/components/modals/add-category-modal"
+import { AddSubcategoryModal } from "@/components/modals/add-subcategory-modal"
 import { toast } from "sonner"
 
 // Demo products removed - using only real Supabase data
@@ -948,7 +949,7 @@ export default function EditarProductoPage() {
         />
 
         {/* Subcategory Creation Modal */}
-        <AddCategoryModal
+        <AddSubcategoryModal
           open={showSubcategoryModal}
           onOpenChange={setShowSubcategoryModal}
           onSuccess={() => {

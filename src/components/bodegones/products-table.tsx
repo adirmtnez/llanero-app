@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal, Package } from "lucide-react"
 import { BodegonProduct } from "@/types/products"
 import { DeleteBodegonProductModal } from "./delete-product-modal"
 
@@ -29,7 +29,6 @@ interface BodegonProductsTableProps {
     name: string
     sku?: string
     status: string
-    inventory: string
     category: string
     price: string
     raw: BodegonProduct
@@ -59,87 +58,89 @@ export function BodegonProductsTable({ products, onProductDeleted }: BodegonProd
 
   return (
     <>
-      <div className="border rounded-lg bg-white overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
+                <Checkbox />
+              </TableHead>
+              <TableHead className="min-w-[200px]">Producto</TableHead>
+              <TableHead className="min-w-[120px]">SKU</TableHead>
+              <TableHead className="min-w-[100px]">Estado</TableHead>
+              <TableHead className="min-w-[120px]">Categoría</TableHead>
+              <TableHead className="min-w-[100px]">Precio</TableHead>
+              <TableHead className="w-12"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {products.map((product) => (
+              <TableRow key={product.id}>
+                <TableCell>
                   <Checkbox />
-                </TableHead>
-                <TableHead className="min-w-[200px]">Producto</TableHead>
-                <TableHead className="min-w-[120px]">SKU</TableHead>
-                <TableHead className="min-w-[100px]">Estado</TableHead>
-                <TableHead className="min-w-[120px]">Inventario</TableHead>
-                <TableHead className="min-w-[120px]">Categoría</TableHead>
-                <TableHead className="min-w-[100px]">Precio</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <Checkbox />
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
-                        <div className="w-4 h-4 sm:w-6 sm:h-6 bg-muted-foreground/20 rounded"></div>
-                      </div>
-                      <span className="truncate">{product.name}</span>
+                </TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {product.raw.image_gallery_urls && product.raw.image_gallery_urls.length > 0 ? (
+                        <img 
+                          src={product.raw.image_gallery_urls[0]} 
+                          alt={product.name}
+                          className="w-full h-full object-cover rounded"
+                        />
+                      ) : (
+                        <Package className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground" />
+                      )}
                     </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-xs sm:text-sm">
-                    <span className="block truncate">{product.sku || "N/A"}</span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={product.status === "Active" ? "default" : "secondary"}
-                      className={product.status === "Active" ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
-                    >
-                      {product.status === "Active" ? "Activo" : product.status === "Draft" ? "Borrador" : product.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className={product.inventory === "No disponible" ? "text-red-600" : "text-green-600"}>
-                    {product.inventory}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    <span className="truncate block">
-                      {product.category === "Uncategorized" ? "Sin categoría" : product.category}
-                    </span>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {product.price}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="cursor-pointer">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEdit(product)}>
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                        <DropdownMenuItem>Ver inventario</DropdownMenuItem>
-                        <DropdownMenuItem>Archivar</DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-red-600"
-                          onClick={() => handleDelete(product)}
-                        >
-                          Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                    <span className="truncate">{product.name}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-muted-foreground font-mono text-xs sm:text-sm">
+                  <span className="block truncate">{product.sku || "N/A"}</span>
+                </TableCell>
+                <TableCell>
+                  <Badge 
+                    variant={product.status === "Active" ? "default" : "secondary"}
+                    className={product.status === "Active" ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
+                  >
+                    {product.status === "Active" ? "Activo" : product.status === "Draft" ? "Borrador" : product.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  <span className="truncate block">
+                    {product.category === "Uncategorized" ? "Sin categoría" : product.category}
+                  </span>
+                </TableCell>
+                <TableCell className="font-medium">
+                  {product.price}
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="cursor-pointer">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(product)}>
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>Duplicar</DropdownMenuItem>
+                      <DropdownMenuItem>Ver inventario</DropdownMenuItem>
+                      <DropdownMenuItem>Archivar</DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-red-600"
+                        onClick={() => handleDelete(product)}
+                      >
+                        Eliminar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       <DeleteBodegonProductModal 

@@ -23,6 +23,7 @@ import { useBodegonSubcategories } from "@/hooks/bodegones/use-bodegon-subcatego
 import { useBodegonProducts } from "@/hooks/bodegones/use-bodegon-products"
 import { useProductImages } from "@/hooks/use-product-images"
 import { AddCategoryModal } from "@/components/modals/add-category-modal"
+import { AddSubcategoryModal } from "@/components/modals/add-subcategory-modal"
 import { QuickAddCategoryPopover } from "@/components/quick-add-category-popover"
 import { toast } from "sonner"
 import { BodegonProduct } from "@/types/products"
@@ -681,15 +682,17 @@ export function BodegonProductForm({ product, mode }: BodegonProductFormProps) {
         onSuccess={() => {
           setShowCategoryModal(false)
         }}
+        categoryType="bodegon"
       />
 
       {/* Subcategory Creation Modal */}
-      <AddCategoryModal
+      <AddSubcategoryModal
         open={showSubcategoryModal}
         onOpenChange={setShowSubcategoryModal}
         onSuccess={() => {
           setShowSubcategoryModal(false)
         }}
+        subcategoryType="bodegon"
       />
     </div>
   )

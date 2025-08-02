@@ -49,8 +49,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
+import { Pagination } from "@/components/ui/pagination"
 import { toast } from "sonner"
-import { AddCategoryModal } from "@/components/modals/add-category-modal"
+import { AddSubcategoryModal } from "@/components/modals/add-subcategory-modal"
 import { EditCategoryModal } from "@/components/modals/edit-category-modal"
 import { DeleteSubcategoryModal } from "@/components/modals/delete-subcategory-modal"
 import { useRestaurantSubcategories, RestaurantSubcategory } from "@/hooks/restaurants/use-restaurant-subcategories"
@@ -65,6 +66,8 @@ export default function RestaurantSubCategoriasPage() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<(RestaurantSubcategory & { subcategoryType: 'restaurant' }) | null>(null)
   const [activeTab, setActiveTab] = useState("all")
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   
   const { subcategories: restaurantSubcategories, loading, refreshSubcategories, updateSubcategory } = useRestaurantSubcategories()
   const { categories: restaurantCategories } = useRestaurantCategories()
@@ -92,7 +95,26 @@ export default function RestaurantSubCategoriasPage() {
     return matchesSearch && matchesTab && matchesCategory
   })
   
-  const subcategories = filteredSubcategories
+  // Pagination logic
+  const totalItems = filteredSubcategories.length
+  const totalPages = Math.ceil(totalItems / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  const subcategories = filteredSubcategories.slice(startIndex, endIndex)
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, activeTab, selectedCategory])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    setCurrentPage(1)
+  }
 
   // Helper functions for subcategory actions
   const handleEditSubcategory = (subcategory: RestaurantSubcategory) => {
@@ -354,6 +376,18 @@ export default function RestaurantSubCategoriasPage() {
                 </TableBody>
               </Table>
             </div>
+            
+            {/* Pagination */}
+            {totalItems > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-6 py-16">
@@ -384,10 +418,11 @@ export default function RestaurantSubCategoriasPage() {
       </div>
 
       {/* Modals */}      
-      <AddCategoryModal 
+      <AddSubcategoryModal 
         open={showAddModal} 
         onOpenChange={setShowAddModal}
         onSuccess={refreshSubcategories}
+        subcategoryType="restaurant"
       />
       
       <EditCategoryModal 
