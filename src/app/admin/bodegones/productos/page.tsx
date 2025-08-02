@@ -33,9 +33,10 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useBodegonProducts } from "@/hooks/bodegones/use-bodegon-products"
 import { useBodegonCategories } from "@/hooks/bodegones/use-bodegon-categories"
+import { useBodegonSubcategories } from "@/hooks/bodegones/use-bodegon-subcategories"
 import { BodegonProduct } from "@/types/products"
-import { TableSkeleton } from "@/components/ui/table-skeleton"
-import { BodegonProductsTable } from "@/components/bodegones/products-table"
+import { Pagination } from "@/components/ui/pagination"
+import { BodegonProductsGrid } from "@/components/bodegones/products-grid"
 
 export default function BodegonesProductosPage() {
   const router = useRouter()
@@ -44,9 +45,12 @@ export default function BodegonesProductosPage() {
   const [realProducts, setRealProducts] = useState<BodegonProduct[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
+  const [totalItems, setTotalItems] = useState(0)
   
   const { getProducts, deleteProduct, loading, formatPrice } = useBodegonProducts()
   const { categories: bodegonCategories } = useBodegonCategories()
+  const { subcategories: bodegonSubcategories } = useBodegonSubcategories()
   
   // Función para obtener el nombre de categoría
   const getCategoryName = (categoryId?: string) => {
@@ -61,7 +65,6 @@ export default function BodegonesProductosPage() {
     name: product.name,
     sku: product.sku || "N/A",
     status: product.is_active_product ? "Active" : "Draft",
-    inventory: product.is_active_product ? "Disponible" : "No disponible", 
     category: getCategoryName(product.category_id),
     price: formatPrice(product.price),
     raw: product // Mantener el objeto original para operaciones
@@ -73,16 +76,17 @@ export default function BodegonesProductosPage() {
   const loadProducts = async () => {
     const result = await getProducts(
       { search: searchQuery },
-      { page: currentPage, limit: 25 }
+      { page: currentPage, limit: pageSize }
     )
     setRealProducts(result.products)
     setTotalPages(result.pagination.totalPages)
+    setTotalItems(result.pagination.total)
   }
 
-  // Cargar productos cuando cambie la página o búsqueda
+  // Cargar productos cuando cambie la página, búsqueda o tamaño de página
   useEffect(() => {
     loadProducts()
-  }, [currentPage, searchQuery])
+  }, [currentPage, searchQuery, pageSize])
 
   // Recargar al cambiar el término de búsqueda
   useEffect(() => {
@@ -93,6 +97,16 @@ export default function BodegonesProductosPage() {
 
     return () => clearTimeout(timeoutId)
   }, [searchQuery])
+
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    setCurrentPage(1)
+  }
 
 
   return (
@@ -232,14 +246,43 @@ export default function BodegonesProductosPage() {
           </div>
         </div>
 
-        {/* Products table */}
+        {/* Products Grid */}
         {loading ? (
-          <TableSkeleton rows={5} columns={6} showCheckbox={true} showActions={true} />
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="bg-gray-200 aspect-[4/3] rounded-t-lg"></div>
+                <div className="p-4 space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : products.length > 0 ? (
-          <BodegonProductsTable 
-            products={products}
-            onProductDeleted={loadProducts}
-          />
+          <>
+            <BodegonProductsGrid 
+              products={products}
+              onProductDeleted={loadProducts}
+              categories={bodegonCategories}
+              subcategories={bodegonSubcategories}
+            />
+            
+            {/* Pagination */}
+            {totalItems > 0 && (
+              <div className="mt-6">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                  totalItems={totalItems}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                />
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-6 py-16">
             <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
