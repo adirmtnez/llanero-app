@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import {
   Dialog,
@@ -45,15 +45,25 @@ export function DeleteProductModal({
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [deletionStep, setDeletionStep] = useState("")
 
   const handleDelete = async () => {
     if (!product) return
 
     setIsLoading(true)
     setError("")
+    setDeletionStep("Iniciando eliminación...")
 
     try {
+      // Simulate progress updates
+      setDeletionStep("Eliminando inventario relacionado...")
+      await new Promise(resolve => setTimeout(resolve, 800))
+      
+      setDeletionStep("Eliminando producto de la base de datos...")
       await onDelete(product)
+      
+      setDeletionStep("Finalizando eliminación...")
+      await new Promise(resolve => setTimeout(resolve, 500))
       
       // Show success toast
       toast.success("¡Producto eliminado exitosamente!", {
@@ -71,22 +81,47 @@ export function DeleteProductModal({
       })
     } finally {
       setIsLoading(false)
+      setDeletionStep("")
     }
   }
 
   const handleCancel = () => {
     setError("")
+    setDeletionStep("")
     onOpenChange(false)
   }
 
+  // Reset state when modal opens
+  React.useEffect(() => {
+    if (open) {
+      setError("")
+      setDeletionStep("")
+      setIsLoading(false)
+    }
+  }, [open])
+
   const renderContent = () => (
     <div className="space-y-4 py-4">
-      <p className="text-center text-muted-foreground">
-        ¿Estás seguro de que quieres eliminar el producto <strong>"{product?.name}"</strong>?
-      </p>
-      <p className="text-center text-sm text-muted-foreground">
-        Esta acción no se puede deshacer.
-      </p>
+      {!isLoading ? (
+        <>
+          <p className="text-center text-muted-foreground">
+            ¿Estás seguro de que quieres eliminar el producto <strong>"{product?.name}"</strong>?
+          </p>
+          <p className="text-center text-sm text-muted-foreground">
+            Esta acción no se puede deshacer.
+          </p>
+        </>
+      ) : (
+        <div className="text-center space-y-3">
+          <div className="flex items-center justify-center space-x-2">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-sm font-medium">{deletionStep}</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Por favor espera mientras eliminamos el producto y sus datos relacionados...
+          </p>
+        </div>
+      )}
 
       {error && (
         <Alert variant="destructive">

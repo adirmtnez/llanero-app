@@ -46,10 +46,10 @@ import { toast } from "sonner"
 import { AddSubcategoryModal } from "@/components/modals/add-subcategory-modal"
 import { EditSubcategoryModal } from "@/components/modals/edit-subcategory-modal"
 import { DeleteSubcategoryModal } from "@/components/modals/delete-subcategory-modal"
-import { useBodegonSubcategories, BodegonSubcategory } from "@/hooks/use-bodegon-subcategories"
-import { useRestaurantSubcategories, RestaurantSubcategory } from "@/hooks/use-restaurant-subcategories"
-import { useBodegonCategories } from "@/hooks/use-bodegon-categories"
-import { useRestaurantCategories } from "@/hooks/use-restaurant-categories"
+import { useBodegonSubcategories, BodegonSubcategory } from "@/hooks/bodegones/use-bodegon-subcategories"
+import { useRestaurantSubcategories, RestaurantSubcategory } from "@/hooks/restaurants/use-restaurant-subcategories"
+import { useBodegonCategories } from "@/hooks/bodegones/use-bodegon-categories"
+import { useRestaurantCategories } from "@/hooks/restaurants/use-restaurant-categories"
 import { useRestaurants } from "@/hooks/use-restaurants"
 
 export default function SubCategoriasPage() {
@@ -367,7 +367,7 @@ export default function SubCategoriasPage() {
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="cursor-pointer">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>

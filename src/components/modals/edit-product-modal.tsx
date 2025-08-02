@@ -84,7 +84,7 @@ export function EditProductModal({ open, onOpenChange, product }: EditProductMod
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newImages = Array.from(e.target.files)
-      setImages(prev => [...prev, ...newImages].slice(0, 6))
+      setImages(prev => [...prev, ...newImages].slice(0, 4))
     }
   }
 
@@ -215,7 +215,7 @@ export function EditProductModal({ open, onOpenChange, product }: EditProductMod
                 
                 {/* Image Preview */}
                 {images.length > 0 && (
-                  <div className="grid grid-cols-6 gap-2 mt-4">
+                  <div className="grid grid-cols-4 gap-2 mt-4">
                     {Array.from({ length: 6 }).map((_, index) => (
                       <div
                         key={index}

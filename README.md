@@ -5,14 +5,22 @@ Una aplicación web moderna para la gestión integral de negocios de alimentos y
 ## 🚀 Características Principales
 
 ### 🏢 Gestión Dual de Negocios
-- **Bodegones**: Gestión completa de productos, inventario y ventas
-- **Restaurantes**: Administración de menús, categorías y pedidos
+- **Bodegones**: Gestión completa de productos, inventario y disponibilidad por ubicación
+- **Restaurantes**: Administración independiente de menús, categorías y productos
 
-### 📦 Sistema de Productos
-- Catálogo completo con categorías y subcategorías
-- Gestión de imágenes con Supabase Storage
-- Control de inventario y precios
-- Estados activo/inactivo para productos
+### 📦 Sistema de Productos Modular
+- **Arquitectura separada**: Workflows completamente independientes para bodegones y restaurantes
+- **Catálogo dual**: Categorías y subcategorías especializadas por tipo de negocio
+- **Gestión de imágenes**: Upload múltiple con Supabase Storage (JPEG, PNG, WebP)
+- **Control de inventario**: Sistema de disponibilidad por bodegón
+- **Estados inteligentes**: Activo/Inactivo con validaciones automáticas
+- **Vista de tarjetas moderna**: Interfaz optimizada con tags para categorías
+
+### 🎨 Interfaz de Usuario Avanzada
+- **Vista de tarjetas responsive**: Grid adaptativo con hover effects y padding optimizado
+- **Tags categorizados**: Visualización por colores (azul para categorías, morado para subcategorías)
+- **Formateo automático de precios**: Separadores de miles y decimales en tiempo real
+- **Modales de confirmación**: Patrones Dialog/Drawer según dispositivo
 
 ### 🛠️ Funcionalidades Administrativas
 - **Dashboard**: Panel de control centralizado
@@ -89,14 +97,31 @@ Visita [http://localhost:3000](http://localhost:3000)
 src/
 ├── app/                    # App Router de Next.js
 │   ├── admin/             # Páginas administrativas
-│   ├── auth/              # Autenticación
-│   └── dashboard/         # Panel principal
+│   │   ├── bodegones/     # Módulo bodegones independiente
+│   │   │   └── productos/ # CRUD productos bodegón
+│   │   ├── restaurantes/  # Módulo restaurantes independiente
+│   │   │   └── productos/ # CRUD productos restaurante
+│   │   ├── auth/          # Autenticación
+│   │   └── dashboard/     # Panel principal
 ├── components/            # Componentes reutilizables
+│   ├── bodegones/        # Componentes específicos bodegones
+│   │   ├── product-form.tsx    # Formulario productos bodegón
+│   │   └── products-table.tsx  # Tabla productos bodegón
+│   ├── restaurants/      # Componentes específicos restaurantes
+│   │   ├── product-form.tsx    # Formulario productos restaurante
+│   │   ├── products-grid.tsx   # Vista tarjetas productos
+│   │   └── delete-product-modal.tsx # Modal confirmación
 │   ├── modals/           # Modales (Dialog/Drawer)
-│   ├── products/         # Componentes de productos
 │   └── ui/               # Componentes base shadcn/ui
-├── contexts/             # Contextos de React
-├── hooks/                # Custom hooks
+├── hooks/                # Custom hooks especializados
+│   ├── bodegones/        # Hooks para bodegones
+│   │   ├── use-bodegon-products.ts
+│   │   ├── use-bodegon-categories.ts
+│   │   └── use-bodegon-subcategories.ts
+│   └── restaurants/      # Hooks para restaurantes
+│       ├── use-restaurant-products.ts
+│       ├── use-restaurant-categories.ts
+│       └── use-restaurant-subcategories.ts
 ├── lib/                  # Utilidades y configuración
 ├── types/                # Definiciones de TypeScript
 └── utils/                # Funciones auxiliares
@@ -104,33 +129,47 @@ src/
 
 ## 🎯 Funcionalidades Destacadas
 
-### ✨ Modales Responsivos
-- **Desktop**: Componentes Dialog centrados
-- **Mobile**: Drawers deslizantes desde abajo
-- **Detección automática** con `useMediaQuery`
+### 🏗️ Arquitectura Modular Separada
+- **Separación completa**: Bodegones y restaurantes como módulos independientes
+- **Hooks especializados**: Custom hooks por tipo de negocio
+- **Componentes dedicados**: Formularios y vistas optimizadas por contexto
+- **Navegación restructurada**: Sidebar con grupos independientes
 
-### 🔄 Gestión de Estado
-- Custom hooks para cada entidad (productos, categorías, etc.)
-- Manejo optimista de actualizaciones
-- Cache inteligente con Supabase
+### ✨ Interfaz de Usuario Moderna
+- **Vista de tarjetas optimizada**: Grid responsive con padding ajustado (py-0)
+- **Tags categorizados**: Colores distintivos para categorías y subcategorías
+- **Modales responsivos**: Dialog (desktop) y Drawer (mobile) con detección automática
+- **Formateo de precios automático**: Separadores de miles y decimales en tiempo real
 
-### 🎨 Experiencia de Usuario
-- Notificaciones toast elegantes
-- Estados de carga con spinners
-- Manejo de errores integrado
-- Confirmaciones de acciones destructivas
+### 🔄 Gestión de Estado Avanzada
+- **Custom hooks especializados**: Separación por tipo de producto
+- **Manejo de inventario**: Sistema de disponibilidad por bodegón con checkboxes
+- **Actualización optimista**: Estados intermedios y validaciones automáticas
+- **Cache inteligente** con Supabase Real-time
 
-### 🔒 Seguridad
-- Autenticación con Supabase Auth
-- Row Level Security (RLS) en base de datos
-- Validación de tipos con TypeScript
+### 🎨 Experiencia de Usuario Pulida
+- **Notificaciones contextuales**: Toast messages con Sonner
+- **Estados de carga consistentes**: Spinners y skeletons
+- **Manejo de errores robusto**: Validaciones y mensajes informativos
+- **Confirmaciones elegantes**: Modales de confirmación para acciones destructivas
 
-## 🧪 Modo Demo
+### 🔒 Seguridad y Validación
+- **Autenticación robusta**: Supabase Auth con RLS
+- **Validación de archivos**: Tipos permitidos (JPEG, PNG, WebP)
+- **Validación de formularios**: Campos requeridos y formatos
+- **TypeScript estricto**: Tipado completo en toda la aplicación
 
-La aplicación incluye un **modo demo** con datos de prueba:
-- Activado por defecto para desarrollo
-- Toggle disponible en la interfaz
-- Datos persistentes en localStorage
+## 🧪 Desarrollo y Testing
+
+### Estructura Modular
+- **Separación completa**: Cada tipo de producto tiene sus propios workflows
+- **Testing independiente**: Los módulos pueden probarse por separado
+- **Escalabilidad**: Fácil adición de nuevos tipos de negocio
+
+### Base de Datos
+- **Supabase**: PostgreSQL con Row Level Security
+- **Tablas especializadas**: `bodegon_products`, `restaurant_products`
+- **Relaciones inteligentes**: Categorías y subcategorías por tipo de negocio
 
 ## 📚 Documentación Adicional
 

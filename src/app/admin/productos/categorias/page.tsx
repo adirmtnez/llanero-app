@@ -42,12 +42,13 @@ import {
 import { Input } from "@/components/ui/input"
 import { useState, useEffect } from "react"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
+import { Pagination } from "@/components/ui/pagination"
 import { toast } from "sonner"
 import { AddCategoryModal } from "@/components/modals/add-category-modal"
 import { EditCategoryModal } from "@/components/modals/edit-category-modal"
 import { DeleteCategoryModal } from "@/components/modals/delete-category-modal"
-import { useBodegonCategories, BodegonCategory } from "@/hooks/use-bodegon-categories"
-import { useRestaurantCategories, RestaurantCategory } from "@/hooks/use-restaurant-categories"
+import { useBodegonCategories, BodegonCategory } from "@/hooks/bodegones/use-bodegon-categories"
+import { useRestaurantCategories, RestaurantCategory } from "@/hooks/restaurants/use-restaurant-categories"
 import { useRestaurants } from "@/hooks/use-restaurants"
 
 export default function CategoriasPage() {
@@ -58,6 +59,8 @@ export default function CategoriasPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<(BodegonCategory & { categoryType: 'bodegon' }) | (RestaurantCategory & { categoryType: 'restaurant' }) | null>(null)
   const [activeTab, setActiveTab] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   
   const { categories: bodegonCategories, loading: bodegonLoading, refreshCategories: refreshBodegonCategories, updateCategory: updateBodegonCategory } = useBodegonCategories()
   const { categories: restaurantCategories, loading: restaurantLoading, refreshCategories: refreshRestaurantCategories, updateCategory: updateRestaurantCategory } = useRestaurantCategories()
@@ -86,7 +89,27 @@ export default function CategoriasPage() {
   })
   
   const loading = bodegonLoading || restaurantLoading
-  const categories = filteredCategories
+  
+  // Pagination logic
+  const totalItems = filteredCategories.length
+  const totalPages = Math.ceil(totalItems / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  const categories = filteredCategories.slice(startIndex, endIndex)
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, activeTab])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    setCurrentPage(1)
+  }
 
   // Helper functions for category actions
   const handleEditCategory = (category: (BodegonCategory & { categoryType: 'bodegon' }) | (RestaurantCategory & { categoryType: 'restaurant' })) => {
@@ -127,10 +150,14 @@ export default function CategoriasPage() {
     }
   }
 
-  const handleModalSuccess = () => {
-    refreshBodegonCategories()
-    refreshRestaurantCategories()
+  const handleModalSuccess = async () => {
+    console.log('🔄 handleModalSuccess called - refreshing categories')
+    await Promise.all([
+      refreshBodegonCategories(),
+      refreshRestaurantCategories()
+    ])
     setSelectedCategory(null)
+    console.log('🔄 Categories refresh completed')
   }
 
   return (
@@ -352,7 +379,7 @@ export default function CategoriasPage() {
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="cursor-pointer">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -377,6 +404,18 @@ export default function CategoriasPage() {
                 </TableBody>
               </Table>
             </div>
+            
+            {/* Pagination */}
+            {totalItems > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-6 py-16">

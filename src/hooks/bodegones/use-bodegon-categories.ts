@@ -3,10 +3,9 @@
 import { useState, useEffect, useCallback } from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
-export interface RestaurantCategory {
+export interface BodegonCategory {
   id: string
   name: string
-  restaurant_id: string
   image: string | null
   is_active: boolean
   created_by?: string
@@ -14,32 +13,29 @@ export interface RestaurantCategory {
   modified_date?: string
 }
 
-const mockCategories: RestaurantCategory[] = [
+const mockCategories: BodegonCategory[] = [
   {
     id: "1",
-    name: "Pizzas",
-    restaurant_id: "1",
+    name: "Salsas",
     image: null,
     is_active: true,
   },
   {
     id: "2", 
-    name: "Hamburguesas",
-    restaurant_id: "1",
+    name: "Familia",
     image: null,
     is_active: true,
   },
   {
     id: "3",
-    name: "Postres",
-    restaurant_id: "2",
+    name: "Platos Principales",
     image: null,
     is_active: true,
   },
 ]
 
-export function useRestaurantCategories() {
-  const [categories, setCategories] = useState<RestaurantCategory[]>([])
+export function useBodegonCategories() {
+  const [categories, setCategories] = useState<BodegonCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -60,7 +56,7 @@ export function useRestaurantCategories() {
 
       // Fetch from Supabase
       const { data, error: supabaseError } = await supabase
-        .from('restaurant_categories')
+        .from('bodegon_categories')
         .select('*')
         .order('name', { ascending: true })
 
@@ -69,10 +65,9 @@ export function useRestaurantCategories() {
       }
 
       // Map Supabase data to our interface
-      const mappedCategories: RestaurantCategory[] = (data || []).map(item => ({
+      const mappedCategories: BodegonCategory[] = (data || []).map(item => ({
         id: item.id, // Keep as-is, don't convert
         name: item.name || '',
-        restaurant_id: item.restaurant_id || '',
         image: item.image || null,
         is_active: item.is_active !== false,
         created_by: item.created_by,
@@ -82,7 +77,7 @@ export function useRestaurantCategories() {
 
       setCategories(mappedCategories)
     } catch (err: any) {
-      console.error('Error fetching restaurant categories:', err)
+      console.error('Error fetching bodegon categories:', err)
       setError(err.message || 'Error al cargar categorías')
       
       // Fallback to mock data on error
@@ -97,13 +92,13 @@ export function useRestaurantCategories() {
     fetchCategories()
   }, [fetchCategories])
 
-  const refreshCategories = () => {
-    fetchCategories()
+  const refreshCategories = async () => {
+    console.log('🔄 Bodegon Categories - Manual refresh triggered')
+    await fetchCategories()
   }
 
   const createCategory = async (categoryData: {
     name: string
-    restaurant_id: string
     image?: string | null
     is_active?: boolean
   }) => {
@@ -116,7 +111,7 @@ export function useRestaurantCategories() {
       if (!configured || !supabase) {
         // Mock creation
         const now = new Date().toISOString()
-        const newCategory: RestaurantCategory = {
+        const newCategory: BodegonCategory = {
           ...categoryData,
           id: Math.random().toString(),
           is_active: categoryData.is_active !== false,
@@ -138,7 +133,7 @@ export function useRestaurantCategories() {
       // Create in Supabase with created_by and timestamps
       const now = new Date()
       const { data, error: supabaseError } = await supabase
-        .from('restaurant_categories')
+        .from('bodegon_categories')
         .insert({
           ...categoryData,
           created_by: user.id,
@@ -153,13 +148,12 @@ export function useRestaurantCategories() {
       }
 
       // Map to our interface
-      console.log('📝 Raw restaurant category data from Supabase:', data)
-      console.log('📝 restaurant category data.id:', data.id, 'Type:', typeof data.id)
+      console.log('📝 Raw category data from Supabase:', data)
+      console.log('📝 category data.id:', data.id, 'Type:', typeof data.id)
       
-      const newCategory: RestaurantCategory = {
+      const newCategory: BodegonCategory = {
         id: data.id, // Keep as-is, don't convert
         name: data.name || '',
-        restaurant_id: data.restaurant_id || '',
         image: data.image || null,
         is_active: data.is_active !== false,
         created_by: data.created_by,
@@ -167,14 +161,14 @@ export function useRestaurantCategories() {
         modified_date: data.modified_date
       }
       
-      console.log('📝 Mapped restaurant category:', newCategory)
+      console.log('📝 Mapped category:', newCategory)
 
       // Update local state
       setCategories(prev => [...prev, newCategory])
       
       return { data: newCategory, error: null }
     } catch (err: any) {
-      console.error('Error creating restaurant category:', err)
+      console.error('Error creating category:', err)
       const errorMessage = err.message || 'Error al crear categoría'
       setError(errorMessage)
       return { data: null, error: errorMessage }
@@ -185,17 +179,16 @@ export function useRestaurantCategories() {
 
   const updateCategory = async (id: string, updates: {
     name?: string
-    restaurant_id?: string
     image?: string | null
     is_active?: boolean
   }) => {
-    console.log('🔄 updateRestaurantCategory called with:', { id, updates })
+    console.log('🔄 updateCategory called with:', { id, updates })
     
     try {
       const configured = isSupabaseConfigured()
       
       if (!configured || !supabase) {
-        console.log('📝 Using mock update for restaurant category')
+        console.log('📝 Using mock update for category')
         // Mock update
         setCategories(prev => prev.map(category => 
           category.id === id 
@@ -205,9 +198,9 @@ export function useRestaurantCategories() {
         return { success: true, error: null }
       }
 
-      console.log('🔄 Updating restaurant category in Supabase with ID:', id, 'Type:', typeof id)
+      console.log('🔄 Updating category in Supabase with ID:', id, 'Type:', typeof id)
       const { data, error: supabaseError } = await supabase
-        .from('restaurant_categories')
+        .from('bodegon_categories')
         .update({
           ...updates,
           modified_date: new Date()
@@ -217,11 +210,11 @@ export function useRestaurantCategories() {
         .single()
 
       if (supabaseError) {
-        console.error('❌ Supabase restaurant category update error:', supabaseError)
+        console.error('❌ Supabase category update error:', supabaseError)
         throw new Error(supabaseError.message)
       }
 
-      console.log('✅ Supabase restaurant category update successful:', data)
+      console.log('✅ Supabase category update successful:', data)
 
       // Update local state
       setCategories(prev => prev.map(category => 
@@ -229,7 +222,6 @@ export function useRestaurantCategories() {
           ? {
               id: data.id,
               name: data.name || '',
-              restaurant_id: data.restaurant_id || '',
               image: data.image || null,
               is_active: data.is_active !== false,
               created_by: data.created_by,
@@ -241,7 +233,7 @@ export function useRestaurantCategories() {
       
       return { success: true, error: null }
     } catch (err: any) {
-      console.error('Error updating restaurant category:', err)
+      console.error('Error updating category:', err)
       const errorMessage = err.message || 'Error al actualizar categoría'
       setError(errorMessage)
       return { success: false, error: errorMessage }
@@ -249,33 +241,47 @@ export function useRestaurantCategories() {
   }
 
   const deleteCategory = async (id: string) => {
+    console.log('🗑️ Bodegon Categories - Starting delete for ID:', id)
     setLoading(true)
     setError(null)
 
     try {
       const configured = isSupabaseConfigured()
+      console.log('🗑️ Bodegon Categories - Supabase configured:', configured)
       
       if (!configured || !supabase) {
+        console.log('🗑️ Bodegon Categories - Using mock deletion')
         // Mock deletion
-        setCategories(prev => prev.filter(category => category.id !== id))
+        setCategories(prev => {
+          const filtered = prev.filter(category => category.id !== id)
+          console.log('🗑️ Bodegon Categories - Mock state updated, new count:', filtered.length)
+          return filtered
+        })
         return { success: true, error: null }
       }
 
+      console.log('🗑️ Bodegon Categories - Executing Supabase delete')
       const { error: supabaseError } = await supabase
-        .from('restaurant_categories')
+        .from('bodegon_categories')
         .delete()
         .eq('id', id)
 
       if (supabaseError) {
+        console.error('🗑️ Bodegon Categories - Supabase error:', supabaseError)
         throw new Error(supabaseError.message)
       }
 
+      console.log('🗑️ Bodegon Categories - Supabase delete successful, updating local state')
       // Update local state
-      setCategories(prev => prev.filter(category => category.id !== id))
+      setCategories(prev => {
+        const filtered = prev.filter(category => category.id !== id)
+        console.log('🗑️ Bodegon Categories - Local state updated, new count:', filtered.length)
+        return filtered
+      })
       
       return { success: true, error: null }
     } catch (err: any) {
-      console.error('Error deleting restaurant category:', err)
+      console.error('Error deleting category:', err)
       const errorMessage = err.message || 'Error al eliminar categoría'
       setError(errorMessage)
       return { success: false, error: errorMessage }

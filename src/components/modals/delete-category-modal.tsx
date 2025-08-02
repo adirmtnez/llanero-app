@@ -27,8 +27,10 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react"
-import { useBodegonCategories, BodegonCategory } from "@/hooks/use-bodegon-categories"
-import { useRestaurantCategories, RestaurantCategory } from "@/hooks/use-restaurant-categories"
+import { useBodegonCategories, BodegonCategory } from "@/hooks/bodegones/use-bodegon-categories"
+import { useRestaurantCategories, RestaurantCategory } from "@/hooks/restaurants/use-restaurant-categories"
+import { useBodegonSubcategories } from "@/hooks/bodegones/use-bodegon-subcategories"
+import { useRestaurantSubcategories } from "@/hooks/restaurants/use-restaurant-subcategories"
 
 interface DeleteCategoryModalProps {
   open: boolean
@@ -41,11 +43,41 @@ export function DeleteCategoryModal({ open, onOpenChange, category, onSuccess }:
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const { deleteCategory: deleteBodegonCategory } = useBodegonCategories()
   const { deleteCategory: deleteRestaurantCategory } = useRestaurantCategories()
+  const { subcategories: bodegonSubcategories } = useBodegonSubcategories()
+  const { subcategories: restaurantSubcategories } = useRestaurantSubcategories()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
+  // Check if category has associated subcategories
+  const hasAssociatedSubcategories = () => {
+    if (!category) return false
+    
+    if (category.categoryType === 'bodegon') {
+      return bodegonSubcategories.some(sub => sub.parent_category === category.id)
+    } else {
+      return restaurantSubcategories.some(sub => sub.parent_category === category.id)
+    }
+  }
+
+  const getAssociatedSubcategoriesCount = () => {
+    if (!category) return 0
+    
+    if (category.categoryType === 'bodegon') {
+      return bodegonSubcategories.filter(sub => sub.parent_category === category.id).length
+    } else {
+      return restaurantSubcategories.filter(sub => sub.parent_category === category.id).length
+    }
+  }
+
   const handleDelete = async () => {
     if (!category) return
+
+    // Check if category has associated subcategories
+    if (hasAssociatedSubcategories()) {
+      const count = getAssociatedSubcategoriesCount()
+      setError(`Esta categoría tiene ${count} subcategoría${count > 1 ? 's' : ''} asociada${count > 1 ? 's' : ''}. Primero debe eliminar las subcategorías antes de eliminar la categoría.`)
+      return
+    }
 
     setIsLoading(true)
     setError("")
@@ -53,19 +85,25 @@ export function DeleteCategoryModal({ open, onOpenChange, category, onSuccess }:
     try {
       const deleteCategory = category.categoryType === 'bodegon' ? deleteBodegonCategory : deleteRestaurantCategory
       
+      console.log('🗑️ Attempting to delete category:', { id: category.id, name: category.name, type: category.categoryType })
       const result = await deleteCategory(category.id)
+      console.log('🗑️ Delete result:', result)
 
-      if (result.error) {
-        throw new Error(result.error)
+      // Check for error in different possible formats
+      if (result && (result.error || result.success === false)) {
+        throw new Error(result.error || 'Error al eliminar categoría')
       }
 
+      console.log('🗑️ Delete successful, showing toast and calling callbacks')
+      
       // Show success toast
       toast.success("¡Categoría eliminada exitosamente!", {
         description: `${category.name} ha sido eliminada permanentemente.`
       })
 
-      // Call success callback
-      onSuccess?.()
+      // Call success callback to refresh the list
+      console.log('🗑️ Calling onSuccess callback')
+      await onSuccess?.()
       
       // Close modal
       onOpenChange(false)
@@ -86,23 +124,41 @@ export function DeleteCategoryModal({ open, onOpenChange, category, onSuccess }:
     onOpenChange(false)
   }
 
-  const renderContent = () => (
-    <div className="space-y-4 py-4">
-      <p className="text-center text-muted-foreground">
-        ¿Estás seguro de que quieres eliminar la categoría <strong>"{category?.name}"</strong>?
-      </p>
-      <p className="text-center text-sm text-muted-foreground">
-        Esta acción no se puede deshacer.
-      </p>
+  const renderContent = () => {
+    const hasSubcategories = hasAssociatedSubcategories()
+    const subcategoriesCount = getAssociatedSubcategoriesCount()
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-    </div>
-  )
+    return (
+      <div className="space-y-4 py-4">
+        <p className="text-center text-muted-foreground">
+          ¿Estás seguro de que quieres eliminar la categoría <strong>"{category?.name}"</strong>?
+        </p>
+        
+        {hasSubcategories && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>¡Atención!</strong> Esta categoría tiene {subcategoriesCount} subcategoría{subcategoriesCount > 1 ? 's' : ''} asociada{subcategoriesCount > 1 ? 's' : ''}. 
+              Primero debe eliminar las subcategorías antes de eliminar la categoría.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {!hasSubcategories && (
+          <p className="text-center text-sm text-muted-foreground">
+            Esta acción no se puede deshacer.
+          </p>
+        )}
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+      </div>
+    )
+  }
 
   if (isDesktop) {
     return (
@@ -133,7 +189,7 @@ export function DeleteCategoryModal({ open, onOpenChange, category, onSuccess }:
               type="button"
               variant="destructive"
               onClick={handleDelete}
-              disabled={isLoading}
+              disabled={isLoading || hasAssociatedSubcategories()}
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -170,7 +226,7 @@ export function DeleteCategoryModal({ open, onOpenChange, category, onSuccess }:
             type="button"
             variant="destructive"
             onClick={handleDelete}
-            disabled={isLoading}
+            disabled={isLoading || hasAssociatedSubcategories()}
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

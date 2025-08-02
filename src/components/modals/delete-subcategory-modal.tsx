@@ -27,8 +27,8 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react"
-import { useBodegonSubcategories, BodegonSubcategory } from "@/hooks/use-bodegon-subcategories"
-import { useRestaurantSubcategories, RestaurantSubcategory } from "@/hooks/use-restaurant-subcategories"
+import { useBodegonSubcategories, BodegonSubcategory } from "@/hooks/bodegones/use-bodegon-subcategories"
+import { useRestaurantSubcategories, RestaurantSubcategory } from "@/hooks/restaurants/use-restaurant-subcategories"
 
 interface DeleteSubcategoryModalProps {
   open: boolean

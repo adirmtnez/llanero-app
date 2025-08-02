@@ -48,52 +48,15 @@ import {
 } from "@/components/ui/select"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useBodegonProducts } from "@/hooks/use-bodegon-products"
-import { useBodegonCategories } from "@/hooks/use-bodegon-categories"
-import { useRestaurantCategories } from "@/hooks/use-restaurant-categories"
+import { useBodegonProducts } from "@/hooks/bodegones/use-bodegon-products"
+import { useBodegonCategories } from "@/hooks/bodegones/use-bodegon-categories"
+import { useRestaurantCategories } from "@/hooks/restaurants/use-restaurant-categories"
 import { useRestaurants } from "@/hooks/use-restaurants"
 import { DeleteProductModal } from "@/components/modals/delete-product-modal"
 import { BodegonProduct } from "@/types/products"
 import { TableSkeleton } from "@/components/ui/table-skeleton"
 
-const demoProducts = [
-  {
-    id: "1",
-    name: "Hamburguesa Clásica",
-    sku: "HAMBUR-001",
-    status: "Active",
-    inventory: "25 in stock",
-    category: "Hamburguesas",
-    price: "$8.99",
-  },
-  {
-    id: "2", 
-    name: "Pizza Margarita",
-    sku: "PIZZA-002",
-    status: "Active",
-    inventory: "12 in stock",
-    category: "Pizzas",
-    price: "$12.50",
-  },
-  {
-    id: "3",
-    name: "Tacos al Pastor",
-    sku: "TACOS-003",
-    status: "Active",
-    inventory: "30 in stock",
-    category: "Tacos",
-    price: "$6.75",
-  },
-  {
-    id: "4",
-    name: "Ensalada César",
-    sku: "ENSALADA-004",
-    status: "Draft",
-    inventory: "0 in stock",
-    category: "Ensaladas",
-    price: "$7.25",
-  },
-]
+// Demo products removed - using only real Supabase data
 
 export default function ProductosPage() {
   const router = useRouter()
@@ -433,7 +396,7 @@ export default function ProductosPage() {
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="cursor-pointer">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>

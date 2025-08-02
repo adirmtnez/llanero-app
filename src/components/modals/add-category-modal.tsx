@@ -39,31 +39,30 @@ import {
   AlertTriangle,
   CheckCircle2
 } from "lucide-react"
-import { useBodegonCategories } from "@/hooks/use-bodegon-categories"
-import { useRestaurantCategories } from "@/hooks/use-restaurant-categories"
+import { useBodegonCategories } from "@/hooks/bodegones/use-bodegon-categories"
+import { useRestaurantCategories } from "@/hooks/restaurants/use-restaurant-categories"
 import { useRestaurants } from "@/hooks/use-restaurants"
 
 interface AddCategoryModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
+  categoryType?: "bodegon" | "restaurant"
 }
 
 interface CategoryForm {
   name: string
-  type: "bodegon" | "restaurant" | ""
   restaurant_id: string
   image: File | null
 }
 
-export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryModalProps) {
+export function AddCategoryModal({ open, onOpenChange, onSuccess, categoryType = "restaurant" }: AddCategoryModalProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const { createCategory: createBodegonCategory, updateCategory: updateBodegonCategory } = useBodegonCategories()
   const { createCategory: createRestaurantCategory, updateCategory: updateRestaurantCategory } = useRestaurantCategories()
   const { restaurants } = useRestaurants()
   const [formData, setFormData] = useState<CategoryForm>({
     name: "",
-    type: "",
     restaurant_id: "",
     image: null
   })
@@ -80,15 +79,6 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
     setSuccess(false)
   }
 
-  const handleTypeChange = (value: "bodegon" | "restaurant") => {
-    setFormData(prev => ({
-      ...prev,
-      type: value,
-      restaurant_id: "" // Reset restaurant selection when type changes
-    }))
-    setError("")
-    setSuccess(false)
-  }
 
   const handleRestaurantChange = (value: string) => {
     setFormData(prev => ({
@@ -111,7 +101,6 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
   const resetForm = () => {
     setFormData({
       name: "",
-      type: "",
       restaurant_id: "",
       image: null
     })
@@ -125,12 +114,7 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
       return
     }
 
-    if (!formData.type) {
-      setError("El tipo de categoría es requerido")
-      return
-    }
-
-    if (formData.type === "restaurant" && !formData.restaurant_id) {
+    if (categoryType === "restaurant" && !formData.restaurant_id) {
       setError("El restaurante es requerido para categorías de restaurante")
       return
     }
@@ -140,15 +124,15 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
 
     try {
       // Create category using the appropriate hook based on type
-      const createCategory = formData.type === 'bodegon' ? createBodegonCategory : createRestaurantCategory
-      const updateCategory = formData.type === 'bodegon' ? updateBodegonCategory : updateRestaurantCategory
+      const createCategory = categoryType === 'bodegon' ? createBodegonCategory : createRestaurantCategory
+      const updateCategory = categoryType === 'bodegon' ? updateBodegonCategory : updateRestaurantCategory
       
       // Prepare category data based on type
       const categoryData = {
         name: formData.name.trim(),
         is_active: true,
         image: null, // Will be updated after upload
-        ...(formData.type === "restaurant" && { restaurant_id: formData.restaurant_id })
+        ...(categoryType === "restaurant" && { restaurant_id: formData.restaurant_id })
       }
       
       const result = await createCategory(categoryData)
@@ -163,7 +147,7 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
         const uploadResult = await uploadFileToStorage(
           formData.image, 
           'categories', 
-          `${formData.type}-category-${result.data.id}-${formData.name.replace(/\s+/g, '-').toLowerCase()}`
+          `${categoryType}-category-${result.data.id}-${formData.name.replace(/\s+/g, '-').toLowerCase()}`
         )
 
         if (uploadResult.error) {
@@ -194,7 +178,7 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
 
       // Show success toast
       toast.success("¡Categoría creada exitosamente!", {
-        description: `${formData.name} ha sido agregada a las categorías ${formData.type === 'bodegon' ? 'de bodegón' : 'de restaurante'}.`
+        description: `${formData.name} ha sido agregada a las categorías ${categoryType === 'bodegon' ? 'de bodegón' : 'de restaurante'}.`
       })
 
       // Call success callback
@@ -233,24 +217,7 @@ export function AddCategoryModal({ open, onOpenChange, onSuccess }: AddCategoryM
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="type">Tipo *</Label>
-        <Select
-          value={formData.type}
-          onValueChange={handleTypeChange}
-          disabled={isLoading}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecciona el tipo de categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="bodegon">Bodegón</SelectItem>
-            <SelectItem value="restaurant">Restaurante</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {formData.type === "restaurant" && (
+      {categoryType === "restaurant" && (
         <div className="space-y-2">
           <Label htmlFor="restaurant">Restaurante *</Label>
           <Select
