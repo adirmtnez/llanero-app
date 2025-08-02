@@ -15,6 +15,7 @@ interface ProductCardProps {
   onIncrement?: () => void
   onDecrement?: () => void
   onRemoveFromCart?: () => void
+  onCardClick?: () => void
 }
 
 export default function ProductCard({
@@ -31,14 +32,18 @@ export default function ProductCard({
   onAddToCart,
   onIncrement,
   onDecrement,
-  onRemoveFromCart
+  onRemoveFromCart,
+  onCardClick
 }: ProductCardProps) {
   const isProductInCart = isInCart || quantity > 0
   
   if (variant === 'horizontal') {
     return (
       <div className="flex-shrink-0 w-40 bg-white rounded-[30px] p-4 flex flex-col">
-        <div className="w-full aspect-square bg-gray-100 rounded-2xl mb-3 flex items-center justify-center relative overflow-hidden">
+        <div 
+          className="w-full aspect-square bg-gray-100 rounded-2xl mb-3 flex items-center justify-center relative overflow-hidden cursor-pointer"
+          onClick={onCardClick}
+        >
             {/* Placeholder para imagen del producto */}
             <div className="w-full h-full bg-gray-200 rounded-2xl flex items-center justify-center">
               <span className="text-gray-400 text-xs">Imagen</span>
@@ -53,8 +58,8 @@ export default function ProductCard({
             </div>
           )}
         </div>
-        <h3 className="text-sm font-semibold text-gray-900 mb-1 leading-tight">{title}</h3>
-        <p className="text-xs text-gray-500 mb-3 line-clamp-2 flex-grow">{description}</p>
+        <h3 className="text-sm font-semibold text-gray-900 mb-1 leading-tight cursor-pointer" onClick={onCardClick}>{title}</h3>
+        <p className="text-xs text-gray-500 mb-3 line-clamp-2 flex-grow cursor-pointer" onClick={onCardClick}>{description}</p>
         <div className="mt-auto">
           {originalPrice && discount ? (
             <div className="flex flex-col mb-2">
@@ -110,9 +115,9 @@ export default function ProductCard({
           {discount}
         </div>
       )}
-      <div className="text-4xl mb-3">{emoji}</div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-sm text-gray-600 mb-4">{description}</p>
+      <div className="text-4xl mb-3 cursor-pointer" onClick={onCardClick}>{emoji}</div>
+      <h3 className="text-lg font-semibold text-gray-900 mb-2 cursor-pointer" onClick={onCardClick}>{title}</h3>
+      <p className="text-sm text-gray-600 mb-4 cursor-pointer" onClick={onCardClick}>{description}</p>
       
       <div className="mt-auto">
         {originalPrice && discount ? (

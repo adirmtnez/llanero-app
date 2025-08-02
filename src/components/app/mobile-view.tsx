@@ -1,16 +1,53 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import ProfileView from './profile-view'
 import CartDrawer from './cart-drawer'
 import ProductCard from './product-card'
+import ProductDetailDrawer from './product-detail-drawer'
 
 export default function MobileView() {
   const [currentView, setCurrentView] = useState('home')
   const [isCartOpen, setIsCartOpen] = useState(false)
+  const [isBodegonMenuOpen, setIsBodegonMenuOpen] = useState(false)
+  const [selectedBodegon, setSelectedBodegon] = useState('Todos los bodegones')
+  const [isProductDetailOpen, setIsProductDetailOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<any>(null)
   const [cart, setCart] = useState<{[key: string]: number}>({
     'chicken-sandwich': 2 // Producto inicial en el carrito
   })
+
+  // Lista de bodegones disponibles
+  const bodegones = [
+    'Todos los bodegones',
+    'Bodegón Central',
+    'Bodegón Norte',
+    'Bodegón Sur',
+    'Bodegón Plaza',
+    'Bodegón Express'
+  ]
+
+  // Función para seleccionar bodegón
+  const handleBodegonSelect = (bodegon: string) => {
+    setSelectedBodegon(bodegon)
+    setIsBodegonMenuOpen(false)
+  }
+
+  // Función para abrir detalle de producto
+  const openProductDetail = (productData: any) => {
+    setSelectedProduct({
+      ...productData,
+      quantity: cart[productData.id] || 0
+    })
+    setIsProductDetailOpen(true)
+  }
+
+  // Función para cerrar detalle de producto
+  const closeProductDetail = () => {
+    setIsProductDetailOpen(false)
+    setSelectedProduct(null)
+  }
 
   // Función para agregar producto al carrito
   const addToCart = (productId: string) => {
@@ -28,23 +65,37 @@ export default function MobileView() {
     }))
   }
 
-  // Estado y funciones del slider
+  // Estado y funciones del slider principal (publicidad)
   const [currentSlide, setCurrentSlide] = useState(0)
   const [touchStart, setTouchStart] = useState(0)
   const [touchEnd, setTouchEnd] = useState(0)
   const totalSlides = 3
 
-  // Función para ir al siguiente slide
+  // Estado y funciones del slider superior (ofertas/promociones)
+  const [currentTopSlide, setCurrentTopSlide] = useState(0)
+  const [topTouchStart, setTopTouchStart] = useState(0)
+  const [topTouchEnd, setTopTouchEnd] = useState(0)
+  const totalTopSlides = 4
+
+  // Funciones para el slider principal
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % totalSlides)
   }
 
-  // Función para ir al slide anterior
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides)
   }
 
-  // Funciones para navegación táctil
+  // Funciones para el slider superior
+  const nextTopSlide = () => {
+    setCurrentTopSlide((prev) => (prev + 1) % totalTopSlides)
+  }
+
+  const prevTopSlide = () => {
+    setCurrentTopSlide((prev) => (prev - 1 + totalTopSlides) % totalTopSlides)
+  }
+
+  // Funciones para navegación táctil del slider principal
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientX)
   }
@@ -68,7 +119,31 @@ export default function MobileView() {
     }
   }
 
-  // Auto-play del slider
+  // Funciones para navegación táctil del slider superior
+  const handleTopTouchStart = (e: React.TouchEvent) => {
+    setTopTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTopTouchMove = (e: React.TouchEvent) => {
+    setTopTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const handleTopTouchEnd = () => {
+    if (!topTouchStart || !topTouchEnd) return
+    
+    const distance = topTouchStart - topTouchEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+
+    if (isLeftSwipe) {
+      nextTopSlide()
+    }
+    if (isRightSwipe) {
+      prevTopSlide()
+    }
+  }
+
+  // Auto-play del slider principal
   useEffect(() => {
     const interval = setInterval(() => {
       nextSlide()
@@ -76,6 +151,15 @@ export default function MobileView() {
 
     return () => clearInterval(interval)
   }, [currentSlide])
+
+  // Auto-play del slider superior
+  useEffect(() => {
+    const topInterval = setInterval(() => {
+      nextTopSlide()
+    }, 4000) // Cambia cada 4 segundos
+
+    return () => clearInterval(topInterval)
+  }, [currentTopSlide])
 
   // Función para decrementar cantidad
   const decrementQuantity = (productId: string) => {
@@ -100,21 +184,138 @@ export default function MobileView() {
   return (
     <div className="min-h-screen" style={{backgroundColor: '#F2F3F6'}}>
       {/* Header móvil */}
-      <header className="bg-white shadow-sm border-b px-4 py-3">
+      <header className="px-4 py-3">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-gray-900">Llanero App</h1>
+          {/* Logo a la izquierda */}
           <div className="flex items-center space-x-2">
-            <button className="p-2 rounded-full bg-gray-100">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5-5-5h5v-12" />
-              </svg>
+            <Image
+              src="https://zykwuzuukrmgztpgnbth.supabase.co/storage/v1/object/public/adminapp//Llanero%20Logo.png"
+              alt="Llanero Logo"
+              width={120}
+              height={40}
+              className="object-contain max-w-[100px]"
+            />
+          </div>
+          
+          {/* Selector de tienda a la derecha */}
+          <div className="relative flex items-center space-x-2">
+            <button 
+              className="flex items-center space-x-2"
+              onClick={() => setIsBodegonMenuOpen(!isBodegonMenuOpen)}
+            >
+              <div className="text-right">
+                <div className="text-xs text-gray-500">Elegir bodegón</div>
+                <div className="text-sm font-medium text-gray-900">{selectedBodegon}</div>
+              </div>
+              <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm">
+                <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+              </div>
             </button>
+
+            {/* Menú desplegable de bodegones */}
+            {isBodegonMenuOpen && (
+              <>
+                {/* Overlay para cerrar el menú */}
+                <div 
+                  className="fixed inset-0 z-10 animate-in fade-in duration-200"
+                  onClick={() => setIsBodegonMenuOpen(false)}
+                />
+                
+                {/* Menú */}
+                <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border z-20 py-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                  {bodegones.map((bodegon, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleBodegonSelect(bodegon)}
+                      className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors duration-200 flex items-center justify-between ${
+                        selectedBodegon === bodegon ? 'text-[#ED702E]' : 'text-gray-700'
+                      }`}
+                      style={{
+                        backgroundColor: selectedBodegon === bodegon ? '#F6EAE2' : 'transparent'
+                      }}
+                    >
+                      <span className="text-sm font-medium">{bodegon}</span>
+                      {selectedBodegon === bodegon && (
+                        <svg className="w-4 h-4 text-[#ED702E]" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </header>
 
       {/* Contenido principal móvil */}
       <main className="pb-32">
+        {/* Slider Superior de Ofertas/Promociones */}
+        <div className="py-4 px-4">
+          <div className="w-full max-h-[200px] mx-auto relative">
+            <div 
+              className="relative overflow-hidden rounded-[20px] h-[200px] shadow-md cursor-grab active:cursor-grabbing"
+              onTouchStart={handleTopTouchStart}
+              onTouchMove={handleTopTouchMove}
+              onTouchEnd={handleTopTouchEnd}
+            >
+              {/* Slides del slider superior */}
+              <div 
+                className="flex transition-transform duration-500 ease-in-out h-full"
+                style={{ transform: `translateX(-${currentTopSlide * 100}%)` }}
+              >
+                {/* Slide 1 - Oferta Especial */}
+                <div className="w-full h-full flex-shrink-0 bg-gradient-to-r from-red-500 to-pink-600 flex items-center justify-center text-white font-semibold text-lg select-none p-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold mb-2">¡Oferta Especial!</div>
+                    <div className="text-sm">50% de descuento en todos los rones</div>
+                  </div>
+                </div>
+                
+                {/* Slide 2 - Delivery Gratis */}
+                <div className="w-full h-full flex-shrink-0 bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center text-white font-semibold text-lg select-none p-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold mb-2">🚚 Delivery Gratis</div>
+                    <div className="text-sm">En compras mayores a $25</div>
+                  </div>
+                </div>
+                
+                {/* Slide 3 - Nuevos Productos */}
+                <div className="w-full h-full flex-shrink-0 bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold text-lg select-none p-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold mb-2">🆕 Nuevos Productos</div>
+                    <div className="text-sm">Descubre nuestras últimas incorporaciones</div>
+                  </div>
+                </div>
+                
+                {/* Slide 4 - Happy Hour */}
+                <div className="w-full h-full flex-shrink-0 bg-gradient-to-r from-purple-500 to-violet-600 flex items-center justify-center text-white font-semibold text-lg select-none p-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold mb-2">🍹 Happy Hour</div>
+                    <div className="text-sm">2x1 en bebidas de 6PM a 8PM</div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Indicadores del slider superior */}
+              <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                {[0, 1, 2, 3].map((index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentTopSlide(index)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      currentTopSlide === index ? 'bg-white' : 'bg-white bg-opacity-50'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Sección de Categorías */}
         <div className="py-4">
           <h2 className="text-xl font-bold text-gray-900 mb-4 px-4">Categorías</h2>
@@ -198,13 +399,20 @@ export default function MobileView() {
             <ProductCard
                emoji="🍗"
                title="Golden Spicy Chicken"
-               description="Indulge in our succulent G..."
+               description="Indulge in our succulent Golden Spicy Chicken, perfectly seasoned and crispy on the outside, tender on the inside."
                price="$5.00"
                quantity={cart['golden-spicy-chicken'] || 0}
                variant="horizontal"
                onAddToCart={() => addToCart('golden-spicy-chicken')}
                onIncrement={() => incrementQuantity('golden-spicy-chicken')}
                onDecrement={() => decrementQuantity('golden-spicy-chicken')}
+               onCardClick={() => openProductDetail({
+                 id: 'golden-spicy-chicken',
+                 emoji: '🍗',
+                 title: 'Golden Spicy Chicken',
+                 description: 'Indulge in our succulent Golden Spicy Chicken, perfectly seasoned and crispy on the outside, tender on the inside. A perfect blend of spices that will make your taste buds dance with joy.',
+                 price: '$5.00'
+               })}
              />
 
             {/* Crispy Chicken Wings */}
@@ -489,6 +697,31 @@ export default function MobileView() {
       <CartDrawer 
         isOpen={isCartOpen} 
         onClose={() => setIsCartOpen(false)} 
+      />
+
+      {/* Product Detail Drawer */}
+      <ProductDetailDrawer
+        isOpen={isProductDetailOpen}
+        onClose={closeProductDetail}
+        product={selectedProduct}
+        onAddToCart={() => {
+          if (selectedProduct) {
+            addToCart(selectedProduct.id)
+            setSelectedProduct(prev => prev ? {...prev, quantity: (prev.quantity || 0) + 1} : null)
+          }
+        }}
+        onIncrement={() => {
+          if (selectedProduct) {
+            incrementQuantity(selectedProduct.id)
+            setSelectedProduct(prev => prev ? {...prev, quantity: (prev.quantity || 0) + 1} : null)
+          }
+        }}
+        onDecrement={() => {
+          if (selectedProduct) {
+            decrementQuantity(selectedProduct.id)
+            setSelectedProduct(prev => prev ? {...prev, quantity: Math.max(0, (prev.quantity || 0) - 1)} : null)
+          }
+        }}
       />
     </div>
   )
