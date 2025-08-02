@@ -106,8 +106,9 @@ export function useRestaurantCategories() {
     fetchCategories()
   }, [fetchCategories])
 
-  const refreshCategories = () => {
-    fetchCategories()
+  const refreshCategories = async () => {
+    console.log('🔄 Restaurant Categories - Manual refresh triggered')
+    await fetchCategories()
   }
 
   const createCategory = async (categoryData: {
@@ -258,29 +259,43 @@ export function useRestaurantCategories() {
   }
 
   const deleteCategory = async (id: string) => {
+    console.log('🗑️ Restaurant Categories - Starting delete for ID:', id)
     setLoading(true)
     setError(null)
 
     try {
       const configured = isSupabaseConfigured()
+      console.log('🗑️ Restaurant Categories - Supabase configured:', configured)
       
       if (!configured || !supabase) {
+        console.log('🗑️ Restaurant Categories - Using mock deletion')
         // Mock deletion
-        setCategories(prev => prev.filter(category => category.id !== id))
+        setCategories(prev => {
+          const filtered = prev.filter(category => category.id !== id)
+          console.log('🗑️ Restaurant Categories - Mock state updated, new count:', filtered.length)
+          return filtered
+        })
         return { success: true, error: null }
       }
 
+      console.log('🗑️ Restaurant Categories - Executing Supabase delete')
       const { error: supabaseError } = await supabase
         .from('restaurant_categories')
         .delete()
         .eq('id', id)
 
       if (supabaseError) {
+        console.error('🗑️ Restaurant Categories - Supabase error:', supabaseError)
         throw new Error(supabaseError.message)
       }
 
+      console.log('🗑️ Restaurant Categories - Supabase delete successful, updating local state')
       // Update local state
-      setCategories(prev => prev.filter(category => category.id !== id))
+      setCategories(prev => {
+        const filtered = prev.filter(category => category.id !== id)
+        console.log('🗑️ Restaurant Categories - Local state updated, new count:', filtered.length)
+        return filtered
+      })
       
       return { success: true, error: null }
     } catch (err: any) {

@@ -92,8 +92,9 @@ export function useBodegonCategories() {
     fetchCategories()
   }, [fetchCategories])
 
-  const refreshCategories = () => {
-    fetchCategories()
+  const refreshCategories = async () => {
+    console.log('🔄 Bodegon Categories - Manual refresh triggered')
+    await fetchCategories()
   }
 
   const createCategory = async (categoryData: {
@@ -240,29 +241,43 @@ export function useBodegonCategories() {
   }
 
   const deleteCategory = async (id: string) => {
+    console.log('🗑️ Bodegon Categories - Starting delete for ID:', id)
     setLoading(true)
     setError(null)
 
     try {
       const configured = isSupabaseConfigured()
+      console.log('🗑️ Bodegon Categories - Supabase configured:', configured)
       
       if (!configured || !supabase) {
+        console.log('🗑️ Bodegon Categories - Using mock deletion')
         // Mock deletion
-        setCategories(prev => prev.filter(category => category.id !== id))
+        setCategories(prev => {
+          const filtered = prev.filter(category => category.id !== id)
+          console.log('🗑️ Bodegon Categories - Mock state updated, new count:', filtered.length)
+          return filtered
+        })
         return { success: true, error: null }
       }
 
+      console.log('🗑️ Bodegon Categories - Executing Supabase delete')
       const { error: supabaseError } = await supabase
         .from('bodegon_categories')
         .delete()
         .eq('id', id)
 
       if (supabaseError) {
+        console.error('🗑️ Bodegon Categories - Supabase error:', supabaseError)
         throw new Error(supabaseError.message)
       }
 
+      console.log('🗑️ Bodegon Categories - Supabase delete successful, updating local state')
       // Update local state
-      setCategories(prev => prev.filter(category => category.id !== id))
+      setCategories(prev => {
+        const filtered = prev.filter(category => category.id !== id)
+        console.log('🗑️ Bodegon Categories - Local state updated, new count:', filtered.length)
+        return filtered
+      })
       
       return { success: true, error: null }
     } catch (err: any) {

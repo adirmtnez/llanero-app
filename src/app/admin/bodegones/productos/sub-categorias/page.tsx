@@ -53,30 +53,30 @@ import { toast } from "sonner"
 import { AddCategoryModal } from "@/components/modals/add-category-modal"
 import { EditCategoryModal } from "@/components/modals/edit-category-modal"
 import { DeleteSubcategoryModal } from "@/components/modals/delete-subcategory-modal"
-import { useRestaurantSubcategories, RestaurantSubcategory } from "@/hooks/restaurants/use-restaurant-subcategories"
-import { useRestaurantCategories } from "@/hooks/restaurants/use-restaurant-categories"
+import { useBodegonSubcategories, BodegonSubcategory } from "@/hooks/bodegones/use-bodegon-subcategories"
+import { useBodegonCategories } from "@/hooks/bodegones/use-bodegon-categories"
 
-export default function RestaurantSubCategoriasPage() {
+export default function BodegonSubCategoriasPage() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedSubcategory, setSelectedSubcategory] = useState<(RestaurantSubcategory & { subcategoryType: 'restaurant' }) | null>(null)
+  const [selectedSubcategory, setSelectedSubcategory] = useState<(BodegonSubcategory & { subcategoryType: 'bodegon' }) | null>(null)
   const [activeTab, setActiveTab] = useState("all")
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   
-  const { subcategories: restaurantSubcategories, loading, refreshSubcategories, updateSubcategory } = useRestaurantSubcategories()
-  const { categories: restaurantCategories } = useRestaurantCategories()
+  const { subcategories: bodegonSubcategories, loading, refreshSubcategories, updateSubcategory } = useBodegonSubcategories()
+  const { categories: bodegonCategories } = useBodegonCategories()
   
   // Helper function to get category name by ID
   const getCategoryName = (categoryId: string) => {
-    const category = restaurantCategories.find(c => c.id === categoryId)
+    const category = bodegonCategories.find(c => c.id === categoryId)
     return category ? category.name : 'N/A'
   }
   
   // Filter subcategories based on active tab, search, and category
-  const filteredSubcategories = restaurantSubcategories.filter(subcategory => {
+  const filteredSubcategories = bodegonSubcategories.filter(subcategory => {
     const matchesSearch = searchQuery.trim() === "" || 
       subcategory.name.toLowerCase().includes(searchQuery.toLowerCase())
     
@@ -95,17 +95,17 @@ export default function RestaurantSubCategoriasPage() {
   const subcategories = filteredSubcategories
 
   // Helper functions for subcategory actions
-  const handleEditSubcategory = (subcategory: RestaurantSubcategory) => {
-    setSelectedSubcategory(subcategory)
+  const handleEditSubcategory = (subcategory: BodegonSubcategory) => {
+    setSelectedSubcategory({ ...subcategory, subcategoryType: 'bodegon' })
     setShowEditModal(true)
   }
 
-  const handleDeleteSubcategory = (subcategory: RestaurantSubcategory) => {
-    setSelectedSubcategory({ ...subcategory, subcategoryType: 'restaurant' })
+  const handleDeleteSubcategory = (subcategory: BodegonSubcategory) => {
+    setSelectedSubcategory({ ...subcategory, subcategoryType: 'bodegon' })
     setShowDeleteModal(true)
   }
 
-  const handleToggleVisibility = async (subcategory: RestaurantSubcategory) => {
+  const handleToggleVisibility = async (subcategory: BodegonSubcategory) => {
     const updatedSubcategory = { ...subcategory, is_active: !subcategory.is_active }
     const result = await updateSubcategory(subcategory.id, { is_active: !subcategory.is_active })
     
@@ -135,13 +135,13 @@ export default function RestaurantSubCategoriasPage() {
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbLink href="/admin/restaurantes">
-                  Restaurantes
+                <BreadcrumbLink href="/admin/bodegones">
+                  Bodegones
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbLink href="/admin/restaurantes/productos">
+                <BreadcrumbLink href="/admin/bodegones/productos">
                   Productos
                 </BreadcrumbLink>
               </BreadcrumbItem>
@@ -158,7 +158,7 @@ export default function RestaurantSubCategoriasPage() {
         {/* Header with title and actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">Sub Categorías de Restaurante</h1>
+            <h1 className="text-2xl font-bold">Sub Categorías de Bodegón</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" className="hidden sm:flex">
@@ -225,7 +225,7 @@ export default function RestaurantSubCategoriasPage() {
                 </SelectTrigger>
                 <SelectContent className="bg-white">
                   <SelectItem value="all">Todas las categorías</SelectItem>
-                  {restaurantCategories.map((category) => (
+                  {bodegonCategories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
                     </SelectItem>
@@ -241,7 +241,7 @@ export default function RestaurantSubCategoriasPage() {
               <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-background w-full sm:min-w-[300px]">
                 <Search className={`h-4 w-4 ${loading ? 'animate-pulse' : ''} text-muted-foreground`} />
                 <Input
-                  placeholder="Buscar subcategorías de restaurante..."
+                  placeholder="Buscar subcategorías de bodegón..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="border-0 p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -362,7 +362,7 @@ export default function RestaurantSubCategoriasPage() {
             </div>
             <div className="text-center space-y-3">
               <p className="text-lg font-medium text-foreground">
-                {searchQuery ? "No se encontraron subcategorías" : "No tienes subcategorías de restaurante aún"}
+                {searchQuery ? "No se encontraron subcategorías" : "No tienes subcategorías de bodegón aún"}
               </p>
               {!searchQuery && (
                 <p className="text-sm text-muted-foreground">
@@ -377,7 +377,7 @@ export default function RestaurantSubCategoriasPage() {
             </div>
             <Button onClick={() => setShowAddModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Agregar subcategoría de restaurante
+              Agregar subcategoría de bodegón
             </Button>
           </div>
         )}

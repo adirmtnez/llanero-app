@@ -127,10 +127,14 @@ export default function CategoriasPage() {
     }
   }
 
-  const handleModalSuccess = () => {
-    refreshBodegonCategories()
-    refreshRestaurantCategories()
+  const handleModalSuccess = async () => {
+    console.log('🔄 handleModalSuccess called - refreshing categories')
+    await Promise.all([
+      refreshBodegonCategories(),
+      refreshRestaurantCategories()
+    ])
     setSelectedCategory(null)
+    console.log('🔄 Categories refresh completed')
   }
 
   return (

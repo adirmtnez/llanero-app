@@ -54,7 +54,7 @@ export default function BodegonCategoriasPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState<BodegonCategory | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<(BodegonCategory & { categoryType: 'bodegon' }) | null>(null)
   const [activeTab, setActiveTab] = useState("all")
   
   const { categories: bodegonCategories, loading, refreshCategories, updateCategory } = useBodegonCategories()
@@ -76,12 +76,12 @@ export default function BodegonCategoriasPage() {
 
   // Helper functions for category actions
   const handleEditCategory = (category: BodegonCategory) => {
-    setSelectedCategory(category)
+    setSelectedCategory({ ...category, categoryType: 'bodegon' })
     setShowEditModal(true)
   }
 
   const handleDeleteCategory = (category: BodegonCategory) => {
-    setSelectedCategory(category)
+    setSelectedCategory({ ...category, categoryType: 'bodegon' })
     setShowDeleteModal(true)
   }
 
