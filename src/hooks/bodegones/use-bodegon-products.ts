@@ -610,7 +610,8 @@ export function useBodegonProducts() {
 
       if (inventoryError) {
         console.error('Error fetching bodegon product inventory:', inventoryError)
-        throw new Error(inventoryError.message)
+        // Return empty array instead of throwing error to prevent UI crashes
+        return []
       }
 
       // Extract bodegon IDs where the product is available
