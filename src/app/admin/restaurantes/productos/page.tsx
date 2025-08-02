@@ -43,7 +43,8 @@ import { useRestaurantCategories } from "@/hooks/restaurants/use-restaurant-cate
 import { useRestaurantSubcategories } from "@/hooks/restaurants/use-restaurant-subcategories"
 import { useRestaurants } from "@/hooks/use-restaurants"
 import { BodegonProduct } from "@/types/products"
-import { RestaurantProductsGrid } from "@/components/restaurants/products-grid"
+import { Pagination } from "@/components/ui/pagination"
+import { RestaurantProductsTable } from "@/components/restaurants/products-table"
 
 export default function RestaurantesProductosPage() {
   const router = useRouter()
@@ -52,6 +53,8 @@ export default function RestaurantesProductosPage() {
   const [realProducts, setRealProducts] = useState<BodegonProduct[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
+  const [totalItems, setTotalItems] = useState(0)
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all')
   
   const { getProducts, deleteProduct, loading, formatPrice } = useRestaurantProducts()
@@ -93,16 +96,27 @@ export default function RestaurantesProductosPage() {
         search: searchQuery,
         restaurant_id: selectedRestaurant && selectedRestaurant !== 'all' ? selectedRestaurant : undefined
       },
-      { page: currentPage, limit: 25 }
+      { page: currentPage, limit: pageSize }
     )
     setRealProducts(result.products)
     setTotalPages(result.pagination.totalPages)
+    setTotalItems(result.pagination.total)
   }
 
-  // Cargar productos cuando cambie la página, búsqueda o restaurante
+  // Funciones de manejo de paginación
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    setCurrentPage(1) // Reset to first page when changing page size
+  }
+
+  // Cargar productos cuando cambie la página, búsqueda, restaurante o tamaño de página
   useEffect(() => {
     loadProducts()
-  }, [currentPage, searchQuery, selectedRestaurant])
+  }, [currentPage, searchQuery, selectedRestaurant, pageSize])
 
   // Recargar al cambiar el término de búsqueda
   useEffect(() => {
@@ -269,27 +283,37 @@ export default function RestaurantesProductosPage() {
           </div>
         </div>
 
-        {/* Products Grid */}
+        {/* Products Table */}
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="animate-pulse">
-                <div className="bg-gray-200 aspect-[4/3] rounded-t-lg"></div>
-                <div className="p-4 space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-                </div>
-              </div>
-            ))}
+          <div className="animate-pulse">
+            <div className="space-y-3">
+              <div className="h-10 bg-gray-200 rounded"></div>
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div key={index} className="h-16 bg-gray-100 rounded"></div>
+              ))}
+            </div>
           </div>
         ) : products.length > 0 ? (
-          <RestaurantProductsGrid 
-            products={products}
-            onProductDeleted={loadProducts}
-            categories={restaurantCategories}
-            subcategories={restaurantSubcategories}
-          />
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <RestaurantProductsTable 
+              products={products}
+              onProductDeleted={loadProducts}
+            />
+            
+            {/* Pagination */}
+            {products.length > 0 && (
+              <div className="p-4 border-t">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                  totalItems={totalItems}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                />
+              </div>
+            )}
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-6 py-16">
             <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">

@@ -71,7 +71,7 @@ export function BodegonProductsGrid({ products, onProductDeleted, categories = [
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {products.map((product) => {
           const productImage = getProductImage(product.raw)
           const categoryName = getCategoryName(product.raw.category_id)
@@ -217,7 +217,7 @@ export function BodegonProductsGrid({ products, onProductDeleted, categories = [
 
       {/* Empty State */}
       {products.length === 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, index) => (
             <Card key={index} className="border-dashed border-2 border-gray-200">
               <CardContent className="p-8 text-center">

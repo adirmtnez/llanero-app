@@ -58,9 +58,7 @@ export function RestaurantProductsTable({ products, onProductDeleted }: Restaura
 
   return (
     <>
-      <div className="border rounded-lg bg-white overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
+      <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">
@@ -136,8 +134,6 @@ export function RestaurantProductsTable({ products, onProductDeleted }: Restaura
               ))}
             </TableBody>
           </Table>
-        </div>
-      </div>
 
       <DeleteRestaurantProductModal 
         open={showDeleteModal} 

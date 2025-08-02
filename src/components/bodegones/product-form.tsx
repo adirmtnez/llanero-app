@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Upload, X, ArrowLeft, Plus } from "lucide-react"
+import { Upload, X, ArrowLeft, Plus, Trash2 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { useBodegones } from "@/hooks/use-bodegones"
@@ -24,6 +24,7 @@ import { useBodegonProducts } from "@/hooks/bodegones/use-bodegon-products"
 import { useProductImages } from "@/hooks/use-product-images"
 import { AddCategoryModal } from "@/components/modals/add-category-modal"
 import { AddSubcategoryModal } from "@/components/modals/add-subcategory-modal"
+import { DeleteBodegonProductModal } from "@/components/bodegones/delete-product-modal"
 import { QuickAddCategoryPopover } from "@/components/quick-add-category-popover"
 import { toast } from "sonner"
 import { BodegonProduct } from "@/types/products"
@@ -53,10 +54,12 @@ export function BodegonProductForm({ product, mode }: BodegonProductFormProps) {
   const [barcode, setBarcode] = useState("")
   const [price, setPrice] = useState("")
   const [images, setImages] = useState<File[]>([])
-  const [existingImages, setExistingImages] = useState<string[]>([])
+  const [existingImages, setExistingImages] = useState<string[]>([])  
   const [bodegonAvailability, setBodegonAvailability] = useState<{[key: string]: boolean}>({})
-  const [productStatus, setProductStatus] = useState("draft")
+  const [productStatus, setProductStatus] = useState("active")
   const [inStock, setInStock] = useState(true)
+  const [isFormInitialized, setIsFormInitialized] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value
@@ -65,9 +68,21 @@ export function BodegonProductForm({ product, mode }: BodegonProductFormProps) {
     setPrice(processedValue)
   }
 
-  // Initialize form with product data for edit mode
+  const handleDeleteProduct = () => {
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteSuccess = () => {
+    setShowDeleteModal(false)
+    router.push("/admin/bodegones/productos")
+  }
+
+  // Initialize form with product data for edit mode (only once)
   useEffect(() => {
-    if (mode === 'edit' && product) {
+    // Wait for bodegones and categories data to be loaded before initializing
+    const dataLoaded = bodegones.length > 0 && bodegonCategories.length > 0
+    
+    if (mode === 'edit' && product && !isFormInitialized && dataLoaded) {
       setName(product.name || "")
       setDescription(product.description || "")
       setSku(product.sku || "")
@@ -76,7 +91,7 @@ export function BodegonProductForm({ product, mode }: BodegonProductFormProps) {
       setPrice(priceValue)
       setCategoryId(product.category_id || "")
       setSubcategoryId(product.subcategory_id || "")
-      setProductStatus(product.is_active_product ? "active" : "draft")
+      setProductStatus(product.is_active_product ? "active" : "inactive")
       setInStock(product.is_active_product !== false)
       setExistingImages(product.image_gallery_urls || [])
       
@@ -84,8 +99,28 @@ export function BodegonProductForm({ product, mode }: BodegonProductFormProps) {
       if (product.id) {
         loadProductInventory(product.id)
       }
+      
+      setIsFormInitialized(true)
+    } else if (mode === 'create' && !isFormInitialized) {
+      // Reset form for create mode
+      setName("")
+      setDescription("")
+      setSku("")
+      setBarcode("")
+      setPrice("")
+      setCategoryId("")
+      setSubcategoryId("")
+      setProductStatus("active")
+      setInStock(true)
+      setExistingImages([])
+      setIsFormInitialized(true)
     }
-  }, [mode, product])
+  }, [mode, product, isFormInitialized, bodegones, bodegonCategories, bodegonesLoading, bodegonCategoriesLoading])
+
+  // Reset initialization flag when product changes (for navigating between different products)
+  useEffect(() => {
+    setIsFormInitialized(false)
+  }, [product?.id])
 
   // Load product inventory for edit mode
   const loadProductInventory = async (productId: string) => {
@@ -179,6 +214,16 @@ export function BodegonProductForm({ product, mode }: BodegonProductFormProps) {
       [bodegonId]: available
     }))
   }
+
+  const handleSelectAllBodegones = (selectAll: boolean) => {
+    const newAvailability: {[key: string]: boolean} = {}
+    bodegones.forEach(bodegon => {
+      newAvailability[bodegon.id] = selectAll
+    })
+    setBodegonAvailability(newAvailability)
+  }
+
+  const areAllBodegonesSelected = bodegones.length > 0 && bodegones.every(bodegon => bodegonAvailability[bodegon.id] === true)
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -302,7 +347,12 @@ export function BodegonProductForm({ product, mode }: BodegonProductFormProps) {
         {/* Header with Actions */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => router.back()}>
+            <Button 
+              type="button"
+              variant="ghost" 
+              size="sm" 
+              onClick={() => router.push("/admin/bodegones/productos")}
+            >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-2xl font-bold">
@@ -310,12 +360,18 @@ export function BodegonProductForm({ product, mode }: BodegonProductFormProps) {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" onClick={() => router.back()}>
-              Descartar
-            </Button>
-            <Button type="button" variant="outline" disabled={creatingProduct || uploadingImages}>
-              Guardar Borrador
-            </Button>
+            {mode === 'edit' && product && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={handleDeleteProduct}
+                disabled={creatingProduct || uploadingImages}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
             <Button 
               type="submit" 
               disabled={creatingProduct || uploadingImages}
@@ -563,6 +619,21 @@ export function BodegonProductForm({ product, mode }: BodegonProductFormProps) {
                 <p className="text-sm text-muted-foreground">
                   Selecciona en qué bodegones estará disponible este producto
                 </p>
+                {bodegones.length > 0 && (
+                  <div className="flex items-center space-x-2 mt-3">
+                    <Checkbox
+                      id="select-all-bodegones"
+                      checked={areAllBodegonesSelected}
+                      onCheckedChange={(checked) => handleSelectAllBodegones(checked === true)}
+                    />
+                    <label
+                      htmlFor="select-all-bodegones"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Seleccionar todo
+                    </label>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 {bodegonesLoading ? (
@@ -626,16 +697,7 @@ export function BodegonProductForm({ product, mode }: BodegonProductFormProps) {
                     />
                   </div>
                 </div>
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <Label className="flex items-center space-x-2">
-                    <div className={`w-4 h-4 ${inStock ? 'bg-green-500' : 'bg-red-500'} rounded-full`}></div>
-                    <span>{inStock ? 'En stock' : 'Agotado'}</span>
-                  </Label>
-                  <Switch 
-                    checked={inStock}
-                    onCheckedChange={setInStock}
-                  />
-                </div>
+
               </CardContent>
             </Card>
 
@@ -651,16 +713,16 @@ export function BodegonProductForm({ product, mode }: BodegonProductFormProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="draft">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                          Borrador
-                        </div>
-                      </SelectItem>
                       <SelectItem value="active">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                           Activo
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="inactive">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          Inactivo
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -694,6 +756,16 @@ export function BodegonProductForm({ product, mode }: BodegonProductFormProps) {
         }}
         subcategoryType="bodegon"
       />
+
+      {/* Delete Product Modal */}
+      {mode === 'edit' && product && (
+        <DeleteBodegonProductModal 
+          open={showDeleteModal} 
+          onOpenChange={setShowDeleteModal}
+          product={product}
+          onSuccess={handleDeleteSuccess}
+        />
+      )}
     </div>
   )
 }

@@ -36,7 +36,7 @@ import { useBodegonCategories } from "@/hooks/bodegones/use-bodegon-categories"
 import { useBodegonSubcategories } from "@/hooks/bodegones/use-bodegon-subcategories"
 import { BodegonProduct } from "@/types/products"
 import { Pagination } from "@/components/ui/pagination"
-import { BodegonProductsGrid } from "@/components/bodegones/products-grid"
+import { BodegonProductsTable } from "@/components/bodegones/products-table"
 
 export default function BodegonesProductosPage() {
   const router = useRouter()
@@ -246,32 +246,26 @@ export default function BodegonesProductosPage() {
           </div>
         </div>
 
-        {/* Products Grid */}
+        {/* Products Table */}
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="animate-pulse">
-                <div className="bg-gray-200 aspect-[4/3] rounded-t-lg"></div>
-                <div className="p-4 space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-                </div>
-              </div>
-            ))}
+          <div className="animate-pulse">
+            <div className="space-y-3">
+              <div className="h-10 bg-gray-200 rounded"></div>
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div key={index} className="h-16 bg-gray-100 rounded"></div>
+              ))}
+            </div>
           </div>
         ) : products.length > 0 ? (
-          <>
-            <BodegonProductsGrid 
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <BodegonProductsTable 
               products={products}
               onProductDeleted={loadProducts}
-              categories={bodegonCategories}
-              subcategories={bodegonSubcategories}
             />
             
             {/* Pagination */}
             {totalItems > 0 && (
-              <div className="mt-6">
+              <div className="p-4 border-t">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
@@ -282,7 +276,7 @@ export default function BodegonesProductosPage() {
                 />
               </div>
             )}
-          </>
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-6 py-16">
             <div className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">

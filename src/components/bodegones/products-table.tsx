@@ -58,8 +58,7 @@ export function BodegonProductsTable({ products, onProductDeleted }: BodegonProd
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <Table>
+      <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
@@ -125,8 +124,6 @@ export function BodegonProductsTable({ products, onProductDeleted }: BodegonProd
                       <DropdownMenuItem onClick={() => handleEdit(product)}>
                         Editar
                       </DropdownMenuItem>
-                      <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                      <DropdownMenuItem>Ver inventario</DropdownMenuItem>
                       <DropdownMenuItem>Archivar</DropdownMenuItem>
                       <DropdownMenuItem 
                         className="text-red-600"
@@ -140,8 +137,7 @@ export function BodegonProductsTable({ products, onProductDeleted }: BodegonProd
               </TableRow>
             ))}
           </TableBody>
-        </Table>
-      </div>
+      </Table>
 
       <DeleteBodegonProductModal 
         open={showDeleteModal} 
